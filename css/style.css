@@ -1,9 +1,42 @@
-travel-planner/
-│── index.html
-│── css/
-│   └── style.css
-│── js/
-│   ├── itinerary.js
-│   ├── expense.js
-│   ├── exchange.js
-│   └── packing.js
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  background: #222;
+  color: white;
+  padding: 15px;
+}
+
+nav button {
+  margin: 5px;
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+main {
+  padding: 20px;
+}
+
+input, select {
+  display: block;
+  margin: 8px 0;
+  padding: 10px;
+  width: 250px;
+}
+
+button {
+  padding: 10px 15px;
+  margin-top: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+ul {
+  margin-top: 15px;
+}
