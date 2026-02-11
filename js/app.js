@@ -7,6 +7,92 @@
     packing: "travel_packing_v2"
   };
 
+  const PACKING_TEMPLATE = {
+    checked: {
+      clothing: [
+        "外出衣物N套",
+        "內衣褲N套",
+        "薄外套N件",
+        "襪子N雙",
+        "鞋子N雙",
+        "拖鞋N雙",
+        "帽子",
+        "墨鏡",
+        "飾品"
+      ],
+      daily: [
+        "雨傘",
+        "衛生紙",
+        "濕紙巾",
+        "衛生棉",
+        "備用塑膠袋",
+        "眼鏡",
+        "隱形眼鏡",
+        "隱眼水盒",
+        "髮圈",
+        "化妝品",
+        "防曬乳",
+        "防蚊液"
+      ],
+      toiletries: [
+        "牙膏",
+        "牙刷",
+        "沐浴乳",
+        "洗髮精",
+        "卸妝油",
+        "卸妝棉",
+        "刮鬍刀",
+        "梳子",
+        "乳液",
+        "化妝水",
+        "毛巾",
+        "浴巾"
+      ]
+    },
+    carry: {
+      docs: [
+        "身分證正本",
+        "身分證影本",
+        "護照正本",
+        "護照影本",
+        "簽證（入境用）",
+        "機票",
+        "登機證",
+        "原子筆",
+        "錢包",
+        "當地貨幣",
+        "信用卡",
+        "SIM卡",
+        "SIM卡針",
+        "預購票券",
+        "鑰匙"
+      ],
+      essentials: [
+        "隨身藥品",
+        "急救包",
+        "眼罩",
+        "頸枕",
+        "耳塞"
+      ],
+      electronics: [
+        "手機",
+        "SIM卡",
+        "SIM卡針",
+        "耳機",
+        "充電線",
+        "行動電源",
+        "平板",
+        "相機"
+      ]
+    },
+    notices: [
+      "行動電源與備用鋰電池不可拖運，必須放手提或隨身行李。",
+      "手提液體每瓶需 ≤ 100ml，且須放入 1 公升可重複密封透明袋。",
+      "刀具與帶刃物品需托運。",
+      "打火機通常以一支為限，仍請以航空公司與目的地規定為準。"
+    ]
+  };
+
   const state = {
     itinerary: load(KEYS.itinerary, []),
     expenses: load(KEYS.expenses, []),
@@ -31,6 +117,8 @@
     bindTableActions();
     bindPackingActions();
     initItineraryDragSort();
+
+    normalizePackingState();
 
     renderItinerary();
     renderExpenses();
@@ -113,6 +201,7 @@
     $$(".tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const tab = btn.dataset.tabBtn;
+
         $$(".tab-btn").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
 
@@ -205,7 +294,8 @@
       if (e.target.matches("input[type='checkbox'][data-check-id]")) {
         const id = e.target.dataset.checkId;
         const item = state.packing.find((x) => x.id === id);
-        if (item) {
+
+        if (item && (item.kind || "item") === "item") {
           item.checked = e.target.checked;
           save(KEYS.packing, state.packing);
           renderPacking();
@@ -236,6 +326,7 @@
 
     if (editingItineraryId) {
       const target = state.itinerary.find((x) => x.id === editingItineraryId);
+
       if (target) {
         target.date = date;
         target.time = time;
@@ -248,7 +339,7 @@
       editingItineraryId = null;
       $("#itineraryForm button[type='submit']").textContent = "新增行程";
     } else {
-      const item = {
+      state.itinerary.push({
         id: uid("it"),
         date,
         time,
@@ -256,9 +347,7 @@
         location,
         transport,
         note
-      };
-
-      state.itinerary.push(item);
+      });
     }
 
     save(KEYS.itinerary, state.itinerary);
@@ -439,16 +528,11 @@
     if (charts.category) charts.category.destroy();
     if (charts.daily) charts.daily.destroy();
 
-    const c1 = $("#categoryChart");
-    const c2 = $("#dailyChart");
-
-    charts.category = new Chart(c1, {
+    charts.category = new Chart($("#categoryChart"), {
       type: "doughnut",
       data: {
         labels: catLabels.length ? catLabels : ["無資料"],
-        datasets: [{
-          data: catData.length ? catData : [1]
-        }]
+        datasets: [{ data: catData.length ? catData : [1] }]
       },
       options: {
         responsive: true,
@@ -457,7 +541,7 @@
       }
     });
 
-    charts.daily = new Chart(c2, {
+    charts.daily = new Chart($("#dailyChart"), {
       type: "line",
       data: {
         labels: dayLabels.length ? dayLabels : ["無資料"],
@@ -495,9 +579,7 @@
   }
 
   function fillCurrencySelect(selectEl, symbols) {
-    selectEl.innerHTML = symbols
-      .map((s) => `<option value="${s}">${s}</option>`)
-      .join("");
+    selectEl.innerHTML = symbols.map((s) => `<option value="${s}">${s}</option>`).join("");
   }
 
   async function convertCurrency() {
@@ -526,6 +608,7 @@
       if (!rate) throw new Error("rate missing");
 
       const converted = amount * rate;
+
       $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(converted, to)}`;
       $("#fxMeta").textContent = `匯率日期：${data.date}｜1 ${from} = ${rate.toFixed(6)} ${to}`;
     } catch {
@@ -580,7 +663,6 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: { y: { beginAtZero: false } },
           plugins: { legend: { position: "bottom" } }
         }
       });
@@ -598,57 +680,112 @@
     }
   }
 
-  // ============ 行李 ============
+  // ============ 行李（Excel 版清單） ============
+  function normalizePackingState() {
+    state.packing = (state.packing || []).map((x) => ({
+      id: x.id || uid("pk"),
+      text: x.text || "",
+      checked: Boolean(x.checked),
+      kind: x.kind || "item"
+    }));
+    save(KEYS.packing, state.packing);
+  }
+
+  function quantityTextByTemplate(text, qty) {
+    if (text === "外出衣物N套") return `外出衣物 x ${qty.outfit} 套`;
+    if (text === "內衣褲N套") return `內衣褲 x ${qty.underwear} 套`;
+    if (text === "薄外套N件") return `薄外套 x ${qty.lightJacket} 件`;
+    if (text === "襪子N雙") return `襪子 x ${qty.socks} 雙`;
+    if (text === "鞋子N雙") return `鞋子 x ${qty.shoes} 雙`;
+    if (text === "拖鞋N雙") return `拖鞋 x ${qty.slippers} 雙`;
+    return text;
+  }
+
+  function dedupeList(arr) {
+    const seen = new Set();
+    const out = [];
+    for (const x of arr) {
+      if (!seen.has(x)) {
+        seen.add(x);
+        out.push(x);
+      }
+    }
+    return out;
+  }
+
   function generatePacking() {
     const type = $("#pType").value;
     const climate = $("#pClimate").value;
     const days = Math.max(1, Number($("#pDays").value || 1));
     const laundry = Math.max(1, Number($("#pLaundry").value || 3));
 
-    const tops = Math.max(3, Math.ceil(days / laundry));
-    const pants = Math.max(2, Math.ceil(tops / 2));
+    const outfit = Math.max(2, Math.ceil(days / laundry));
+    const underwear = Math.max(days, outfit);
+    const socks = Math.max(days, outfit);
+    const lightJacket = climate === "cold" ? 2 : 1;
+    const shoes = type === "nature" ? 2 : 1;
+    const slippers = 1;
 
-    let items = [
-      "護照",
-      "簽證/居留文件",
-      "錢包與信用卡",
-      "手機",
-      "充電器",
-      "轉接頭",
-      "牙刷牙膏",
-      "個人藥品"
-    ];
+    const qty = { outfit, underwear, socks, lightJacket, shoes, slippers };
 
-    if (type === "city") {
-      items.push("舒適步行鞋", "小型側背包", "行程票券截圖");
-    } else if (type === "nature") {
-      items.push("防滑鞋", "保溫水壺", "輕量雨衣", "行動電源");
-    } else if (type === "business") {
-      items.push("正式服裝", "筆電", "履歷/文件", "名片");
-    }
+    const checkedBase = [
+      ...PACKING_TEMPLATE.checked.clothing,
+      ...PACKING_TEMPLATE.checked.daily,
+      ...PACKING_TEMPLATE.checked.toiletries
+    ].map((t) => quantityTextByTemplate(t, qty));
 
-    if (climate === "cold") {
-      items.push("羽絨外套", "毛帽", "手套", "發熱衣");
-    } else if (climate === "hot") {
-      items.push("防曬乳", "太陽眼鏡", "透氣衣物");
-    } else if (climate === "rainy") {
-      items.push("雨傘", "防水外套", "防水鞋套");
-    }
+    const carryBase = dedupeList([
+      ...PACKING_TEMPLATE.carry.docs,
+      ...PACKING_TEMPLATE.carry.essentials,
+      ...PACKING_TEMPLATE.carry.electronics
+    ]);
 
-    items.push(`上衣 x ${tops}`, `褲子 x ${pants}`, `襪子 x ${tops}`);
+    const typeExtras = [];
+    if (type === "city") typeExtras.push("輕便側背包", "行程票券截圖");
+    if (type === "nature") typeExtras.push("防滑鞋", "保溫水壺", "輕量雨衣", "行動電源");
+    if (type === "business") typeExtras.push("正式服裝", "筆電", "履歷/文件", "名片");
 
-    if (days >= 7) {
-      items.push("洗衣袋", "旅行洗衣精");
-    }
+    const climateExtras = [];
+    if (climate === "cold") climateExtras.push("羽絨外套", "毛帽", "手套", "發熱衣");
+    if (climate === "hot") climateExtras.push("太陽眼鏡", "透氣衣物", "防曬乳");
+    if (climate === "rainy") climateExtras.push("雨傘", "防水外套", "防水鞋套");
 
-    items = [...new Set(items)];
+    const checkedItems = dedupeList([...checkedBase, ...typeExtras, ...climateExtras]);
+    const carryItems = dedupeList(carryBase);
 
-    state.packing = items.map((text, i) => ({
-      id: uid(`pk${i}`),
-      text,
-      checked: false
-    }));
+    const list = [];
 
+    list.push({ id: uid("pk"), kind: "section", text: "【託運行李】" });
+    checkedItems.forEach((text) => {
+      list.push({
+        id: uid("pk"),
+        kind: "item",
+        text: `[託運] ${text}`,
+        checked: false
+      });
+    });
+
+    list.push({ id: uid("pk"), kind: "section", text: "【手提／隨身行李】" });
+    carryItems.forEach((text) => {
+      list.push({
+        id: uid("pk"),
+        kind: "item",
+        text: `[手提] ${text}`,
+        checked: false
+      });
+    });
+
+    list.push({ id: uid("pk"), kind: "section", text: "【出發前提醒】" });
+    PACKING_TEMPLATE.notices.forEach((text) => {
+      list.push({
+        id: uid("pk"),
+        kind: "note",
+        text: `⚠ ${text}`,
+        checked: false
+      });
+    });
+
+    state.packing = list;
     save(KEYS.packing, state.packing);
     renderPacking();
   }
@@ -660,7 +797,8 @@
 
     state.packing.push({
       id: uid("pk"),
-      text,
+      kind: "item",
+      text: `[自訂] ${text}`,
       checked: false
     });
 
@@ -670,7 +808,10 @@
   }
 
   function clearPackingChecks() {
-    state.packing = state.packing.map((x) => ({ ...x, checked: false }));
+    state.packing = state.packing.map((x) => ({
+      ...x,
+      checked: (x.kind || "item") === "item" ? false : Boolean(x.checked)
+    }));
     save(KEYS.packing, state.packing);
     renderPacking();
   }
@@ -683,13 +824,33 @@
       return;
     }
 
-    ul.innerHTML = state.packing.map((item) => `
-      <li>
-        <input type="checkbox" data-check-id="${item.id}" ${item.checked ? "checked" : ""} />
-        <span class="${item.checked ? "done" : ""}">${escapeHTML(item.text)}</span>
-        <button class="remove-item" data-remove-id="${item.id}">刪除</button>
-      </li>
-    `).join("");
+    ul.innerHTML = state.packing.map((item) => {
+      const kind = item.kind || "item";
+
+      if (kind === "section") {
+        return `
+          <li class="section-row">
+            <strong>${escapeHTML(item.text)}</strong>
+          </li>
+        `;
+      }
+
+      if (kind === "note") {
+        return `
+          <li class="note-row">
+            <span>${escapeHTML(item.text)}</span>
+          </li>
+        `;
+      }
+
+      return `
+        <li>
+          <input type="checkbox" data-check-id="${item.id}" ${item.checked ? "checked" : ""} />
+          <span class="${item.checked ? "done" : ""}">${escapeHTML(item.text)}</span>
+          <button class="remove-item" data-remove-id="${item.id}">刪除</button>
+        </li>
+      `;
+    }).join("");
   }
 
   function escapeHTML(str) {
