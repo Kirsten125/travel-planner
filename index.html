@@ -1,78 +1,172 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>旅遊整合工具網站</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Hub｜旅遊整合工具</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <div class="bg"></div>
 
-  <header>
-    <h1>旅遊整合工具</h1>
-    <nav>
-      <button onclick="showPage('itinerary')">行程規劃</button>
-      <button onclick="showPage('expense')">花費記帳</button>
-      <button onclick="showPage('exchange')">匯率換算</button>
-      <button onclick="showPage('packing')">行李清單</button>
-    </nav>
+  <header class="app-header">
+    <h1>Travel Hub 旅遊整合工具</h1>
+    <p>行程規劃｜花費記帳｜匯率換算｜行李清單</p>
   </header>
 
-  <main>
-    <section id="itinerary" class="page">
-      <h2>旅遊行程規劃</h2>
-      <input id="tripDay" placeholder="第幾天 (例如 Day 1)">
-      <input id="tripTime" placeholder="時間 (例如 10:00)">
-      <input id="tripPlace" placeholder="景點/活動">
-      <input id="tripNote" placeholder="備註 (交通/門票)">
-      <button onclick="addItinerary()">新增行程</button>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab-btn="itinerary">行程規劃</button>
+    <button class="tab-btn" data-tab-btn="expense">花費記帳</button>
+    <button class="tab-btn" data-tab-btn="exchange">匯率工具</button>
+    <button class="tab-btn" data-tab-btn="packing">行李清單</button>
+  </nav>
 
-      <ul id="itineraryList"></ul>
+  <main class="container">
+    <!-- 行程 -->
+    <section id="tab-itinerary" class="tab-panel">
+      <div class="panel">
+        <h2>旅遊行程規劃</h2>
+        <form id="itineraryForm" class="form-grid">
+          <div class="field">
+            <label>日期</label>
+            <input type="date" id="iDate" required />
+          </div>
+          <div class="field">
+            <label>時間</label>
+            <input type="time" id="iTime" required />
+          </div>
+          <div class="field">
+            <label>活動/景點</label>
+            <input type="text" id="iTitle" placeholder="例如：Golden Circle" required />
+          </div>
+          <div class="field">
+            <label>地點</label>
+            <input type="text" id="iLocation" placeholder="例如：Reykjavík" />
+          </div>
+          <div class="field">
+            <label>交通方式</label>
+            <input type="text" id="iTransport" placeholder="例如：巴士 / 自駕" />
+          </div>
+          <div class="field">
+            <label>備註</label>
+            <input type="text" id="iNote" placeholder="例如：先線上買票" />
+          </div>
+          <button class="primary-btn full" type="submit">新增行程</button>
+        </form>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>時間</th>
+                <th>活動</th>
+                <th>地點</th>
+                <th>交通</th>
+                <th>備註</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="itineraryTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
-    <section id="expense" class="page hidden">
-      <h2>旅遊花費記帳</h2>
-      <input id="expenseName" placeholder="項目 (例如 午餐)">
-      <input id="expenseCategory" placeholder="分類 (餐飲/交通/住宿)">
-      <input id="expenseAmount" type="number" placeholder="金額">
-      <button onclick="addExpense()">新增花費</button>
+    <!-- 記帳 -->
+    <section id="tab-expense" class="tab-panel hidden">
+      <div class="panel">
+        <h2>旅遊花費記帳（TWD）</h2>
 
-      <ul id="expenseList"></ul>
-      <h3 id="totalExpense">總花費：0</h3>
+        <form id="expenseForm" class="form-grid">
+          <div class="field">
+            <label>日期</label>
+            <input type="date" id="eDate" required />
+          </div>
+          <div class="field">
+            <label>項目</label>
+            <input type="text" id="eItem" placeholder="例如：午餐" required />
+          </div>
+          <div class="field">
+            <label>分類</label>
+            <select id="eCategory" required>
+              <option value="餐飲">餐飲</option>
+              <option value="交通">交通</option>
+              <option value="住宿">住宿</option>
+              <option value="門票">門票</option>
+              <option value="購物">購物</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>金額（TWD）</label>
+            <input type="number" id="eAmount" min="0" step="1" placeholder="例如：350" required />
+          </div>
+          <button class="primary-btn full" type="submit">新增花費</button>
+        </form>
+
+        <div class="metrics">
+          <div class="metric-card">
+            <h3>總花費</h3>
+            <p id="mTotal">NT$0</p>
+          </div>
+          <div class="metric-card">
+            <h3>今日花費</h3>
+            <p id="mToday">NT$0</p>
+          </div>
+          <div class="metric-card">
+            <h3>平均每日</h3>
+            <p id="mAvg">NT$0</p>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3>分類占比</h3>
+            <canvas id="categoryChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>每日花費</h3>
+            <canvas id="dailyChart"></canvas>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>項目</th>
+                <th>分類</th>
+                <th>金額</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="expenseTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
-    <section id="exchange" class="page hidden">
-      <h2>匯率換算工具</h2>
-      <input id="twd" type="number" placeholder="輸入台幣">
-      <input id="rate" type="number" placeholder="匯率 (例如 0.029)">
-      <button onclick="convert()">換算</button>
-      <h3 id="result">結果：0</h3>
-    </section>
+    <!-- 匯率 -->
+    <section id="tab-exchange" class="tab-panel hidden">
+      <div class="panel">
+        <h2>匯率換算工具</h2>
 
-    <section id="packing" class="page hidden">
-      <h2>旅行行李清單生成器</h2>
-      <select id="tripType">
-        <option value="normal">一般旅行</option>
-        <option value="winter">冬季旅行</option>
-        <option value="business">打工/工作旅行</option>
-      </select>
-      <button onclick="generatePackingList()">生成清單</button>
-
-      <ul id="packingList"></ul>
-    </section>
-  </main>
-
-  <script>
-    function showPage(pageId) {
-      document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
-      document.getElementById(pageId).classList.remove("hidden");
-    }
-  </script>
-
-  <script src="js/itinerary.js"></script>
-  <script src="js/expense.js"></script>
-  <script src="js/exchange.js"></script>
-  <script src="js/packing.js"></script>
-
-</body>
-</html>
+        <form id="fxForm" class="form-grid fx-grid">
+          <div class="field">
+            <label>金額</label>
+            <input type="number" id="fxAmount" min="0" step="0.01" value="1000" required />
+          </div>
+          <div class="field">
+            <label>從</label>
+            <select id="fxFrom"></select>
+          </div>
+          <div class="field">
+            <label>換成</label>
+            <select id="fxTo"></select>
+          </div>
+          <div class="fx-actions">
+            <button class="secondary-btn" type="button" id="swapBtn">交換貨幣</button>
+            <button class="primary-btn" t
