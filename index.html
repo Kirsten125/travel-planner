@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="./css/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
   <div class="bg"></div>
 
@@ -27,37 +28,44 @@
     <section id="tab-itinerary" class="tab-panel">
       <div class="panel">
         <h2>旅遊行程規劃</h2>
+
         <form id="itineraryForm" class="form-grid">
           <div class="field">
             <label>日期</label>
             <input type="date" id="iDate" required />
           </div>
+
           <div class="field">
             <label>時間</label>
             <input type="time" id="iTime" required />
           </div>
+
           <div class="field">
             <label>活動/景點</label>
             <input type="text" id="iTitle" placeholder="例如：Golden Circle" required />
           </div>
+
           <div class="field">
             <label>地點</label>
             <input type="text" id="iLocation" placeholder="例如：Reykjavík" />
           </div>
+
           <div class="field">
             <label>交通方式</label>
             <input type="text" id="iTransport" placeholder="例如：巴士 / 自駕" />
           </div>
+
           <div class="field">
             <label>備註</label>
             <input type="text" id="iNote" placeholder="例如：先線上買票" />
           </div>
+
           <button class="primary-btn full" type="submit">新增行程</button>
         </form>
 
         <div class="table-wrap">
           <table>
-           <thead>
+            <thead>
               <tr>
                 <th>排序</th>
                 <th>日期</th>
@@ -70,7 +78,9 @@
               </tr>
             </thead>
             <tbody id="itineraryTbody"></tbody>
+          </table>
         </div>
+
       </div>
     </section>
 
@@ -84,10 +94,12 @@
             <label>日期</label>
             <input type="date" id="eDate" required />
           </div>
+
           <div class="field">
             <label>項目</label>
             <input type="text" id="eItem" placeholder="例如：午餐" required />
           </div>
+
           <div class="field">
             <label>分類</label>
             <select id="eCategory" required>
@@ -99,10 +111,12 @@
               <option value="其他">其他</option>
             </select>
           </div>
+
           <div class="field">
             <label>金額（TWD）</label>
             <input type="number" id="eAmount" min="0" step="1" placeholder="例如：350" required />
           </div>
+
           <button class="primary-btn full" type="submit">新增花費</button>
         </form>
 
@@ -111,10 +125,12 @@
             <h3>總花費</h3>
             <p id="mTotal">NT$0</p>
           </div>
+
           <div class="metric-card">
             <h3>今日花費</h3>
             <p id="mToday">NT$0</p>
           </div>
+
           <div class="metric-card">
             <h3>平均每日</h3>
             <p id="mAvg">NT$0</p>
@@ -126,6 +142,7 @@
             <h3>分類占比</h3>
             <canvas id="categoryChart"></canvas>
           </div>
+
           <div class="chart-card">
             <h3>每日花費</h3>
             <canvas id="dailyChart"></canvas>
@@ -159,14 +176,101 @@
             <label>金額</label>
             <input type="number" id="fxAmount" min="0" step="0.01" value="1000" required />
           </div>
+
           <div class="field">
             <label>從</label>
             <select id="fxFrom"></select>
           </div>
+
           <div class="field">
             <label>換成</label>
             <select id="fxTo"></select>
           </div>
+
           <div class="fx-actions">
             <button class="secondary-btn" type="button" id="swapBtn">交換貨幣</button>
-            <button class="primary-btn" t
+            <button class="primary-btn" type="submit">立即換算</button>
+          </div>
+        </form>
+
+        <div class="result-card">
+          <p id="fxResult">請輸入金額並按「立即換算」</p>
+          <p id="fxMeta" class="muted"></p>
+        </div>
+
+        <h3>匯率趨勢圖</h3>
+
+        <form id="fxTrendForm" class="form-grid">
+          <div class="field">
+            <label>開始日期</label>
+            <input type="date" id="fxStart" required />
+          </div>
+
+          <div class="field">
+            <label>結束日期</label>
+            <input type="date" id="fxEnd" required />
+          </div>
+
+          <button class="primary-btn full" type="submit">更新趨勢圖</button>
+        </form>
+
+        <div class="chart-card">
+          <canvas id="fxChart"></canvas>
+        </div>
+
+        <p class="muted">備註：此匯率 API 為工作日匯率資料。</p>
+      </div>
+    </section>
+
+    <!-- 行李 -->
+    <section id="tab-packing" class="tab-panel hidden">
+      <div class="panel">
+        <h2>旅行行李清單生成器</h2>
+
+        <form id="packingForm" class="form-grid">
+          <div class="field">
+            <label>旅行型態</label>
+            <select id="pType">
+              <option value="city">城市旅遊</option>
+              <option value="nature">戶外自然</option>
+              <option value="business">工作/面試</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>氣候</label>
+            <select id="pClimate">
+              <option value="mild">溫和</option>
+              <option value="cold">寒冷</option>
+              <option value="hot">炎熱</option>
+              <option value="rainy">多雨</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>旅遊天數</label>
+            <input type="number" id="pDays" min="1" value="7" />
+          </div>
+
+          <div class="field">
+            <label>幾天洗一次衣服</label>
+            <input type="number" id="pLaundry" min="1" value="3" />
+          </div>
+
+          <button class="primary-btn full" type="submit">生成清單</button>
+        </form>
+
+        <div class="inline-add">
+          <input type="text" id="customPackingInput" placeholder="自訂新增物品，例如：相機電池" />
+          <button type="button" class="secondary-btn" id="addCustomPackingBtn">新增</button>
+          <button type="button" class="danger-btn" id="clearPackingBtn">取消全部勾選</button>
+        </div>
+
+        <ul id="packingList" class="check-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
