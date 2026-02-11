@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>旅遊整合工具網站</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header>
+    <h1>旅遊整合工具</h1>
+    <nav>
+      <button onclick="showPage('itinerary')">行程規劃</button>
+      <button onclick="showPage('expense')">花費記帳</button>
+      <button onclick="showPage('exchange')">匯率換算</button>
+      <button onclick="showPage('packing')">行李清單</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="itinerary" class="page">
+      <h2>旅遊行程規劃</h2>
+      <input id="tripDay" placeholder="第幾天 (例如 Day 1)">
+      <input id="tripTime" placeholder="時間 (例如 10:00)">
+      <input id="tripPlace" placeholder="景點/活動">
+      <input id="tripNote" placeholder="備註 (交通/門票)">
+      <button onclick="addItinerary()">新增行程</button>
+
+      <ul id="itineraryList"></ul>
+    </section>
+
+    <section id="expense" class="page hidden">
+      <h2>旅遊花費記帳</h2>
+      <input id="expenseName" placeholder="項目 (例如 午餐)">
+      <input id="expenseCategory" placeholder="分類 (餐飲/交通/住宿)">
+      <input id="expenseAmount" type="number" placeholder="金額">
+      <button onclick="addExpense()">新增花費</button>
+
+      <ul id="expenseList"></ul>
+      <h3 id="totalExpense">總花費：0</h3>
+    </section>
+
+    <section id="exchange" class="page hidden">
+      <h2>匯率換算工具</h2>
+      <input id="twd" type="number" placeholder="輸入台幣">
+      <input id="rate" type="number" placeholder="匯率 (例如 0.029)">
+      <button onclick="convert()">換算</button>
+      <h3 id="result">結果：0</h3>
+    </section>
+
+    <section id="packing" class="page hidden">
+      <h2>旅行行李清單生成器</h2>
+      <select id="tripType">
+        <option value="normal">一般旅行</option>
+        <option value="winter">冬季旅行</option>
+        <option value="business">打工/工作旅行</option>
+      </select>
+      <button onclick="generatePackingList()">生成清單</button>
+
+      <ul id="packingList"></ul>
+    </section>
+  </main>
+
+  <script>
+    function showPage(pageId) {
+      document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+      document.getElementById(pageId).classList.remove("hidden");
+    }
+  </script>
+
+  <script src="js/itinerary.js"></script>
+  <script src="js/expense.js"></script>
+  <script src="js/exchange.js"></script>
+  <script src="js/packing.js"></script>
+
+</body>
+</html>
