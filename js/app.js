@@ -26,6 +26,7 @@
     initDefaultDates();
     bindForms();
     bindTableActions();
+    initItineraryDragSort();
     bindPackingActions();
 
     renderItinerary();
@@ -221,29 +222,29 @@
 
   function renderItinerary() {
     const tbody = $("#itineraryTbody");
-    const rows = [...state.itinerary].sort((a, b) => {
-      const A = `${a.date} ${a.time}`;
-      const B = `${b.date} ${b.time}`;
-      return A.localeCompare(B);
-    });
 
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="muted">目前還沒有行程，先新增第一筆。</td></tr>`;
-      return;
-    }
+  // 重要：不要再自動用日期時間 sort，否則會把手動拖曳順序洗掉
+  const rows = [...state.itinerary];
 
-    tbody.innerHTML = rows.map((r) => `
-      <tr>
-        <td>${escapeHTML(r.date)}</td>
-        <td>${escapeHTML(r.time)}</td>
-        <td>${escapeHTML(r.title)}</td>
-        <td>${escapeHTML(r.location || "-")}</td>
-        <td>${escapeHTML(r.transport || "-")}</td>
-        <td>${escapeHTML(r.note || "-")}</td>
-        <td><button class="action-btn" data-delete-id="${r.id}">刪除</button></td>
-      </tr>
-    `).join("");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="muted">目前還沒有行程，先新增第一筆。</td></tr>`;
+    return;
   }
+
+  tbody.innerHTML = rows.map((r) => `
+    <tr data-id="${r.id}" draggable="true">
+      <td class="drag-cell" title="拖曳排序"><span class="drag-handle">☰</span></td>
+      <td>${escapeHTML(r.date)}</td>
+      <td>${escapeHTML(r.time)}</td>
+      <td>${escapeHTML(r.title)}</td>
+      <td>${escapeHTML(r.location || "-")}</td>
+      <td>${escapeHTML(r.transport || "-")}</td>
+      <td>${escapeHTML(r.note || "-")}</td>
+      <td><button class="action-btn" data-delete-id="${r.id}">刪除</button></td>
+    </tr>
+  `).join("");
+}
+
 
   // ============ 記帳 ============
   function addExpense() {
@@ -285,6 +286,70 @@
         </tr>
       `).join("");
     }
+
+    function initItineraryDragSort() {
+  const tbody = $("#itineraryTbody");
+  let draggingRow = null;
+
+  tbody.addEventListener("dragstart", (e) => {
+    const row = e.target.closest("tr[data-id]");
+    if (!row) return;
+
+    // 只允許從拖曳把手開始拖
+    if (!e.target.closest(".drag-handle")) {
+      e.preventDefault();
+      return;
+    }
+
+    draggingRow = row;
+    row.classList.add("dragging");
+
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", row.dataset.id || "");
+    }
+  });
+
+  tbody.addEventListener("dragover", (e) => {
+    if (!draggingRow) return;
+    e.preventDefault();
+
+    const target = e.target.closest("tr[data-id]");
+    if (!target || target === draggingRow) return;
+
+    const rect = target.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+
+    tbody.insertBefore(draggingRow, isAfter ? target.nextSibling : target);
+  });
+
+  const finalize = () => {
+    if (!draggingRow) return;
+    draggingRow.classList.remove("dragging");
+    draggingRow = null;
+    persistItineraryOrderFromDOM();
+  };
+
+  tbody.addEventListener("drop", (e) => {
+    e.preventDefault();
+    finalize();
+  });
+
+  tbody.addEventListener("dragend", finalize);
+}
+
+function persistItineraryOrderFromDOM() {
+  const rows = [...$("#itineraryTbody").querySelectorAll("tr[data-id]")];
+  if (!rows.length) return;
+
+  const orderIds = rows.map((tr) => tr.dataset.id);
+  const map = new Map(state.itinerary.map((item) => [item.id, item]));
+
+  state.itinerary = orderIds.map((id) => map.get(id)).filter(Boolean);
+  save(KEYS.itinerary, state.itinerary);
+  renderItinerary();
+}
+
 
     const total = state.expenses.reduce((sum, x) => sum + Number(x.amount || 0), 0);
     const t = todayStr();
