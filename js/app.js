@@ -1,5 +1,6 @@
 (() => {
   const FX_API = "https://api.frankfurter.dev/v1";
+
   const KEYS = {
     itinerary: "travel_itinerary_v2",
     expenses: "travel_expenses_v2",
@@ -19,6 +20,8 @@
     fx: null
   };
 
+  let editingItineraryId = null;
+
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
@@ -26,8 +29,8 @@
     initDefaultDates();
     bindForms();
     bindTableActions();
-    initItineraryDragSort();
     bindPackingActions();
+    initItineraryDragSort();
 
     renderItinerary();
     renderExpenses();
@@ -160,16 +163,37 @@
 
   function bindTableActions() {
     $("#itineraryTbody").addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-delete-id]");
-      if (!btn) return;
-      state.itinerary = state.itinerary.filter((x) => x.id !== btn.dataset.deleteId);
-      save(KEYS.itinerary, state.itinerary);
-      renderItinerary();
+      const deleteBtn = e.target.closest("button[data-delete-id]");
+      const editBtn = e.target.closest("button[data-edit-id]");
+
+      if (deleteBtn) {
+        state.itinerary = state.itinerary.filter((x) => x.id !== deleteBtn.dataset.deleteId);
+        save(KEYS.itinerary, state.itinerary);
+        renderItinerary();
+        return;
+      }
+
+      if (editBtn) {
+        const target = state.itinerary.find((x) => x.id === editBtn.dataset.editId);
+        if (!target) return;
+
+        editingItineraryId = target.id;
+
+        $("#iDate").value = target.date;
+        $("#iTime").value = target.time;
+        $("#iTitle").value = target.title;
+        $("#iLocation").value = target.location;
+        $("#iTransport").value = target.transport;
+        $("#iNote").value = target.note;
+
+        $("#itineraryForm button[type='submit']").textContent = "更新行程";
+      }
     });
 
     $("#expenseTbody").addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-delete-id]");
       if (!btn) return;
+
       state.expenses = state.expenses.filter((x) => x.id !== btn.dataset.deleteId);
       save(KEYS.expenses, state.expenses);
       renderExpenses();
@@ -192,6 +216,7 @@
     $("#packingList").addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-remove-id]");
       if (!btn) return;
+
       state.packing = state.packing.filter((x) => x.id !== btn.dataset.removeId);
       save(KEYS.packing, state.packing);
       renderPacking();
@@ -200,19 +225,42 @@
 
   // ============ 行程 ============
   function addItinerary() {
-    const item = {
-      id: uid("it"),
-      date: $("#iDate").value,
-      time: $("#iTime").value,
-      title: $("#iTitle").value.trim(),
-      location: $("#iLocation").value.trim(),
-      transport: $("#iTransport").value.trim(),
-      note: $("#iNote").value.trim()
-    };
+    const date = $("#iDate").value;
+    const time = $("#iTime").value;
+    const title = $("#iTitle").value.trim();
+    const location = $("#iLocation").value.trim();
+    const transport = $("#iTransport").value.trim();
+    const note = $("#iNote").value.trim();
 
-    if (!item.date || !item.time || !item.title) return;
+    if (!date || !time || !title) return;
 
-    state.itinerary.push(item);
+    if (editingItineraryId) {
+      const target = state.itinerary.find((x) => x.id === editingItineraryId);
+      if (target) {
+        target.date = date;
+        target.time = time;
+        target.title = title;
+        target.location = location;
+        target.transport = transport;
+        target.note = note;
+      }
+
+      editingItineraryId = null;
+      $("#itineraryForm button[type='submit']").textContent = "新增行程";
+    } else {
+      const item = {
+        id: uid("it"),
+        date,
+        time,
+        title,
+        location,
+        transport,
+        note
+      };
+
+      state.itinerary.push(item);
+    }
+
     save(KEYS.itinerary, state.itinerary);
     renderItinerary();
 
@@ -222,29 +270,94 @@
 
   function renderItinerary() {
     const tbody = $("#itineraryTbody");
+    const rows = [...state.itinerary];
 
-  // 重要：不要再自動用日期時間 sort，否則會把手動拖曳順序洗掉
-  const rows = [...state.itinerary];
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="muted">目前還沒有行程，先新增第一筆。</td></tr>`;
+      return;
+    }
 
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="muted">目前還沒有行程，先新增第一筆。</td></tr>`;
-    return;
+    tbody.innerHTML = rows.map((r) => `
+      <tr data-id="${r.id}" draggable="true">
+        <td class="drag-cell" title="拖曳排序">
+          <span class="drag-handle">☰</span>
+        </td>
+        <td>${escapeHTML(r.date)}</td>
+        <td>${escapeHTML(r.time)}</td>
+        <td>${escapeHTML(r.title)}</td>
+        <td>${escapeHTML(r.location || "-")}</td>
+        <td>${escapeHTML(r.transport || "-")}</td>
+        <td>${escapeHTML(r.note || "-")}</td>
+        <td>
+          <button class="secondary-btn" data-edit-id="${r.id}">編輯</button>
+          <button class="action-btn" data-delete-id="${r.id}">刪除</button>
+        </td>
+      </tr>
+    `).join("");
   }
 
-  tbody.innerHTML = rows.map((r) => `
-    <tr data-id="${r.id}" draggable="true">
-      <td class="drag-cell" title="拖曳排序"><span class="drag-handle">☰</span></td>
-      <td>${escapeHTML(r.date)}</td>
-      <td>${escapeHTML(r.time)}</td>
-      <td>${escapeHTML(r.title)}</td>
-      <td>${escapeHTML(r.location || "-")}</td>
-      <td>${escapeHTML(r.transport || "-")}</td>
-      <td>${escapeHTML(r.note || "-")}</td>
-      <td><button class="action-btn" data-delete-id="${r.id}">刪除</button></td>
-    </tr>
-  `).join("");
-}
+  // ============ 行程拖曳排序 ============
+  function initItineraryDragSort() {
+    const tbody = $("#itineraryTbody");
+    let draggingRow = null;
 
+    tbody.addEventListener("dragstart", (e) => {
+      const row = e.target.closest("tr[data-id]");
+      if (!row) return;
+
+      if (!e.target.closest(".drag-handle")) {
+        e.preventDefault();
+        return;
+      }
+
+      draggingRow = row;
+      row.classList.add("dragging");
+
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", row.dataset.id || "");
+      }
+    });
+
+    tbody.addEventListener("dragover", (e) => {
+      if (!draggingRow) return;
+      e.preventDefault();
+
+      const target = e.target.closest("tr[data-id]");
+      if (!target || target === draggingRow) return;
+
+      const rect = target.getBoundingClientRect();
+      const isAfter = (e.clientY - rect.top) > rect.height / 2;
+
+      tbody.insertBefore(draggingRow, isAfter ? target.nextSibling : target);
+    });
+
+    const finalize = () => {
+      if (!draggingRow) return;
+      draggingRow.classList.remove("dragging");
+      draggingRow = null;
+      persistItineraryOrderFromDOM();
+    };
+
+    tbody.addEventListener("drop", (e) => {
+      e.preventDefault();
+      finalize();
+    });
+
+    tbody.addEventListener("dragend", finalize);
+  }
+
+  function persistItineraryOrderFromDOM() {
+    const rows = [...$("#itineraryTbody").querySelectorAll("tr[data-id]")];
+    if (!rows.length) return;
+
+    const orderIds = rows.map((tr) => tr.dataset.id);
+    const map = new Map(state.itinerary.map((item) => [item.id, item]));
+
+    state.itinerary = orderIds.map((id) => map.get(id)).filter(Boolean);
+    save(KEYS.itinerary, state.itinerary);
+    renderItinerary();
+  }
 
   // ============ 記帳 ============
   function addExpense() {
@@ -287,70 +400,6 @@
       `).join("");
     }
 
-    function initItineraryDragSort() {
-  const tbody = $("#itineraryTbody");
-  let draggingRow = null;
-
-  tbody.addEventListener("dragstart", (e) => {
-    const row = e.target.closest("tr[data-id]");
-    if (!row) return;
-
-    // 只允許從拖曳把手開始拖
-    if (!e.target.closest(".drag-handle")) {
-      e.preventDefault();
-      return;
-    }
-
-    draggingRow = row;
-    row.classList.add("dragging");
-
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", row.dataset.id || "");
-    }
-  });
-
-  tbody.addEventListener("dragover", (e) => {
-    if (!draggingRow) return;
-    e.preventDefault();
-
-    const target = e.target.closest("tr[data-id]");
-    if (!target || target === draggingRow) return;
-
-    const rect = target.getBoundingClientRect();
-    const isAfter = (e.clientY - rect.top) > rect.height / 2;
-
-    tbody.insertBefore(draggingRow, isAfter ? target.nextSibling : target);
-  });
-
-  const finalize = () => {
-    if (!draggingRow) return;
-    draggingRow.classList.remove("dragging");
-    draggingRow = null;
-    persistItineraryOrderFromDOM();
-  };
-
-  tbody.addEventListener("drop", (e) => {
-    e.preventDefault();
-    finalize();
-  });
-
-  tbody.addEventListener("dragend", finalize);
-}
-
-function persistItineraryOrderFromDOM() {
-  const rows = [...$("#itineraryTbody").querySelectorAll("tr[data-id]")];
-  if (!rows.length) return;
-
-  const orderIds = rows.map((tr) => tr.dataset.id);
-  const map = new Map(state.itinerary.map((item) => [item.id, item]));
-
-  state.itinerary = orderIds.map((id) => map.get(id)).filter(Boolean);
-  save(KEYS.itinerary, state.itinerary);
-  renderItinerary();
-}
-
-
     const total = state.expenses.reduce((sum, x) => sum + Number(x.amount || 0), 0);
     const t = todayStr();
     const today = state.expenses
@@ -361,6 +410,7 @@ function persistItineraryOrderFromDOM() {
     state.expenses.forEach((x) => {
       dayMap[x.date] = (dayMap[x.date] || 0) + Number(x.amount || 0);
     });
+
     const days = Object.keys(dayMap).length || 1;
     const avg = total / days;
 
@@ -434,7 +484,7 @@ function persistItineraryOrderFromDOM() {
       const data = await res.json();
       state.currencies = Object.keys(data).sort();
     } catch {
-      // 使用內建備援
+      // fallback
     }
 
     fillCurrencySelect($("#fxFrom"), state.currencies);
@@ -536,6 +586,7 @@ function persistItineraryOrderFromDOM() {
       });
     } catch {
       if (charts.fx) charts.fx.destroy();
+
       charts.fx = new Chart($("#fxChart"), {
         type: "line",
         data: {
@@ -626,6 +677,7 @@ function persistItineraryOrderFromDOM() {
 
   function renderPacking() {
     const ul = $("#packingList");
+
     if (!state.packing.length) {
       ul.innerHTML = `<li><span class="muted">尚未生成清單，先選條件後按「生成清單」。</span></li>`;
       return;
