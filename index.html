@@ -24,7 +24,8 @@
   </nav>
 
   <main class="container">
-    <!-- 行程 -->
+
+    <!-- 行程規劃 -->
     <section id="tab-itinerary" class="tab-panel">
       <div class="panel">
         <h2>旅遊行程規劃</h2>
@@ -66,7 +67,7 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>
+              <tr class="thead-center">
                 <th>排序</th>
                 <th>日期</th>
                 <th>時間</th>
@@ -83,7 +84,7 @@
       </div>
     </section>
 
-    <!-- 記帳 -->
+    <!-- 花費記帳 -->
     <section id="tab-expense" class="tab-panel hidden">
       <div class="panel">
         <h2>旅遊花費記帳（TWD）</h2>
@@ -124,12 +125,10 @@
             <h3>總花費</h3>
             <p id="mTotal">NT$0</p>
           </div>
-
           <div class="metric-card">
             <h3>今日花費</h3>
             <p id="mToday">NT$0</p>
           </div>
-
           <div class="metric-card">
             <h3>平均每日</h3>
             <p id="mAvg">NT$0</p>
@@ -141,7 +140,6 @@
             <h3>分類占比</h3>
             <canvas id="categoryChart"></canvas>
           </div>
-
           <div class="chart-card">
             <h3>每日花費</h3>
             <canvas id="dailyChart"></canvas>
@@ -151,7 +149,7 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>
+              <tr class="thead-center">
                 <th>日期</th>
                 <th>項目</th>
                 <th>分類</th>
@@ -165,7 +163,7 @@
       </div>
     </section>
 
-    <!-- 匯率 -->
+    <!-- 匯率工具 -->
     <section id="tab-exchange" class="tab-panel hidden">
       <div class="panel">
         <h2>匯率換算工具</h2>
@@ -177,13 +175,13 @@
           </div>
 
           <div class="field">
-            <label>從</label>
-            <select id="fxFrom"></select>
+            <label>從（可打字搜尋）</label>
+            <input id="fxFromInput" list="currencyList" placeholder="例如：新臺幣(TWD)" />
           </div>
 
           <div class="field">
-            <label>換成</label>
-            <select id="fxTo"></select>
+            <label>換成（可打字搜尋）</label>
+            <input id="fxToInput" list="currencyList" placeholder="例如：日圓(JPY)" />
           </div>
 
           <div class="fx-actions">
@@ -192,41 +190,44 @@
           </div>
         </form>
 
-        <div class="result-card">
-          <p id="fxResult" class="fx-big-result">請輸入金額並按「立即換算」</p>
-          <p id="fxMeta" class="muted"></p>
+        <datalist id="currencyList"></datalist>
+
+        <div class="fx-result-box">
+          <div id="fxResult" class="fx-result">請輸入金額並換算</div>
+          <div id="fxMeta" class="fx-meta"></div>
         </div>
+
+        <hr class="divider">
 
         <h3>匯率趨勢圖</h3>
 
-        <form id="fxTrendForm" class="form-grid">
+        <form id="fxTrendForm" class="form-grid fx-trend-grid">
           <div class="field">
             <label>開始日期</label>
-            <input type="date" id="fxStart" required />
+            <input type="date" id="fxStart" />
           </div>
 
           <div class="field">
             <label>結束日期</label>
-            <input type="date" id="fxEnd" required />
+            <input type="date" id="fxEnd" />
           </div>
 
           <button class="primary-btn full" type="submit">更新趨勢圖</button>
         </form>
 
-        <div class="chart-card">
+        <div class="chart-card fx-chart-card">
           <canvas id="fxChart"></canvas>
         </div>
-
-        <p class="muted">備註：匯率 API 來源 frankfurter.app。</p>
       </div>
     </section>
 
-    <!-- 行李 -->
+    <!-- 行李清單 -->
     <section id="tab-packing" class="tab-panel hidden">
-      <div class="panel packing-panel">
+      <div class="panel">
         <h2>旅行行李清單生成器</h2>
 
         <form id="packingForm" class="packing-grid">
+
           <div class="field">
             <label>旅遊型態</label>
             <select id="pType">
@@ -254,7 +255,7 @@
 
           <div class="field">
             <label>旅遊天數</label>
-            <input type="number" id="pDays" min="1" value="7" />
+            <input type="number" id="pDays" min="1" value="3" />
           </div>
 
           <div class="field">
@@ -262,18 +263,21 @@
             <input type="number" id="pLaundry" min="1" value="3" />
           </div>
 
-          <button class="primary-btn packing-btn" type="submit">生成清單</button>
+          <div class="field packing-btn-wrap">
+            <button class="primary-btn" type="submit">生成清單</button>
+          </div>
         </form>
 
         <div class="packing-actions">
           <input type="text" id="customPackingInput" placeholder="自訂新增物品，例如：相機電池" />
-          <button type="button" class="secondary-btn" id="addCustomPackingBtn">新增</button>
-          <button type="button" class="danger-btn" id="clearPackingBtn">取消全部勾選</button>
+          <button class="secondary-btn" type="button" id="addCustomPackingBtn">新增</button>
+          <button class="danger-btn" type="button" id="clearPackingBtn">取消全部勾選</button>
         </div>
 
         <ul id="packingList" class="check-list"></ul>
       </div>
     </section>
+
   </main>
 
   <script src="./js/app.js"></script>
