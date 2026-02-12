@@ -1,29 +1,30 @@
 (() => {
-  const FX_API = "https://api.frankfurter.dev/v1";
+  const FX_API = "https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1";
 
+  // 常用幣別中文名稱
   const CURRENCY_ZH = {
-    USD: "美金",
-    EUR: "歐元",
-    TWD: "台幣",
-    JPY: "日圓",
-    GBP: "英鎊",
-    KRW: "韓元",
-    CNY: "人民幣",
-    HKD: "港幣",
-    SGD: "新加坡幣",
-    AUD: "澳幣",
-    CAD: "加幣",
-    CHF: "瑞士法郎",
-    SEK: "瑞典克朗",
-    NOK: "挪威克朗",
-    DKK: "丹麥克朗",
-    NZD: "紐幣",
-    THB: "泰銖",
-    MYR: "馬來西亞幣",
-    PHP: "菲律賓披索",
-    IDR: "印尼盾",
-    INR: "印度盧比",
-    VND: "越南盾"
+    twd: "新臺幣",
+    usd: "美金",
+    eur: "歐元",
+    jpy: "日圓",
+    gbp: "英鎊",
+    krw: "韓元",
+    cny: "人民幣",
+    hkd: "港幣",
+    sgd: "新加坡幣",
+    aud: "澳幣",
+    cad: "加幣",
+    chf: "瑞士法郎",
+    sek: "瑞典克朗",
+    nok: "挪威克朗",
+    dkk: "丹麥克朗",
+    nzd: "紐幣",
+    thb: "泰銖",
+    myr: "馬來西亞幣",
+    php: "菲律賓披索",
+    idr: "印尼盾",
+    inr: "印度盧比",
+    vnd: "越南盾"
   };
 
   const KEYS = {
@@ -122,7 +123,8 @@
     itinerary: load(KEYS.itinerary, []),
     expenses: load(KEYS.expenses, []),
     packing: load(KEYS.packing, []),
-    currencies: ["TWD", "EUR", "USD", "JPY", "GBP", "KRW", "CNY"]
+    currencies: ["TWD", "USD", "EUR", "JPY", "GBP", "KRW", "CNY"],
+    currencyNameMap: {}
   };
 
   const charts = {
@@ -338,7 +340,7 @@
     });
   }
 
-  // ============ 行程 ============
+  // ================= 行程 =================
   function addItinerary() {
     const date = $("#iDate").value;
     const time = $("#iTime").value;
@@ -472,7 +474,7 @@
     renderItinerary();
   }
 
-  // ============ 記帳 ============
+  // ================= 記帳 =================
   function addExpense() {
     const amount = Number($("#eAmount").value);
     if (!Number.isFinite(amount) || amount < 0) return;
@@ -514,6 +516,7 @@
     }
 
     const total = state.expenses.reduce((sum, x) => sum + Number(x.amount || 0), 0);
+
     const t = todayStr();
     const today = state.expenses
       .filter((x) => x.date === t)
@@ -546,6 +549,7 @@
 
     const catLabels = Object.keys(catMap);
     const catData = Object.values(catMap);
+
     const dayLabels = Object.keys(dayMap).sort();
     const dayData = dayLabels.map((d) => dayMap[d]);
 
@@ -584,35 +588,44 @@
     });
   }
 
-  // ============ 匯率 ============
+  // ================= 匯率 =================
   async function initCurrencies() {
     try {
-      const res = await fetch(`${FX_API}/currencies`);
-      if (!res.ok) throw new Error("currency fetch failed");
+      const res = await fetch(`${FX_API}/latest/currencies.json`);
+      if (!res.ok) throw new Error("currencies fetch failed");
 
       const data = await res.json();
-      state.currencies = Object.keys(data).sort();
+      state.currencyNameMap = data;
 
-      if (!state.currencies.includes("TWD")) {
-        state.currencies.unshift("TWD");
-      }
+      state.currencies = Object.keys(data)
+        .map((x) => x.toUpperCase())
+        .sort();
+
+      if (!state.currencies.includes("TWD")) state.currencies.unshift("TWD");
     } catch {
-      if (!state.currencies.includes("TWD")) {
-        state.currencies.unshift("TWD");
-      }
+      state.currencies = ["TWD", "USD", "EUR", "JPY", "GBP", "KRW", "CNY"];
     }
 
     fillCurrencySelect($("#fxFrom"), state.currencies);
     fillCurrencySelect($("#fxTo"), state.currencies);
 
-    if (state.currencies.includes("TWD")) $("#fxFrom").value = "TWD";
-    if (state.currencies.includes("EUR")) $("#fxTo").value = "EUR";
+    $("#fxFrom").value = "TWD";
+    $("#fxTo").value = "USD";
+  }
+
+  function currencyLabel(code) {
+    const lower = code.toLowerCase();
+    const zh = CURRENCY_ZH[lower];
+    const en = state.currencyNameMap?.[lower];
+
+    if (zh) return `${zh} ${code}`;
+    if (en) return `${en} ${code}`;
+    return code;
   }
 
   function fillCurrencySelect(selectEl, symbols) {
     selectEl.innerHTML = symbols.map((code) => {
-      const zh = CURRENCY_ZH[code] || "未知幣別";
-      return `<option value="${code}">${zh} ${code}</option>`;
+      return `<option value="${code}">${currencyLabel(code)}</option>`;
     }).join("");
   }
 
@@ -623,6 +636,7 @@
 
     if (!Number.isFinite(amount) || amount < 0) {
       $("#fxResult").textContent = "請輸入正確金額";
+      $("#fxMeta").textContent = "";
       return;
     }
 
@@ -633,13 +647,17 @@
     }
 
     try {
-      const url = `${FX_API}/latest?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`;
+      const fromLower = from.toLowerCase();
+      const toLower = to.toLowerCase();
+
+      const url = `${FX_API}/latest/currencies/${fromLower}/${toLower}.json`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error("fx latest failed");
+      if (!res.ok) throw new Error("fx fetch failed");
 
       const data = await res.json();
-      const rate = data?.rates?.[to];
-      if (!rate) throw new Error("rate missing");
+      const rate = data?.[toLower];
+
+      if (!Number.isFinite(rate)) throw new Error("rate missing");
 
       const converted = amount * rate;
 
@@ -651,6 +669,22 @@
     }
   }
 
+  function buildDateList(start, end) {
+    const list = [];
+    const s = new Date(start);
+    const e = new Date(end);
+
+    while (s <= e) {
+      const y = s.getFullYear();
+      const m = String(s.getMonth() + 1).padStart(2, "0");
+      const d = String(s.getDate()).padStart(2, "0");
+      list.push(`${y}-${m}-${d}`);
+      s.setDate(s.getDate() + 1);
+    }
+
+    return list;
+  }
+
   async function loadFxTrend() {
     const from = $("#fxFrom").value;
     const to = $("#fxTo").value;
@@ -658,6 +692,13 @@
     const end = $("#fxEnd").value;
 
     if (!start || !end || start > end) return;
+
+    const dateList = buildDateList(start, end);
+
+    if (dateList.length > 90) {
+      $("#fxMeta").textContent = "趨勢圖日期範圍請控制在 90 天內（避免 API 過多請求）";
+      return;
+    }
 
     try {
       let labels = [];
@@ -667,15 +708,22 @@
         labels = [start, end];
         values = [1, 1];
       } else {
-        const url = `${FX_API}/${start}..${end}?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("fx trend failed");
+        const fromLower = from.toLowerCase();
+        const toLower = to.toLowerCase();
 
-        const data = await res.json();
-        const rates = data?.rates || {};
+        for (const date of dateList) {
+          const url = `${FX_API}/${date}/currencies/${fromLower}/${toLower}.json`;
+          const res = await fetch(url);
+          if (!res.ok) continue;
 
-        labels = Object.keys(rates).sort();
-        values = labels.map((d) => rates[d][to]).filter((v) => Number.isFinite(v));
+          const data = await res.json();
+          const rate = data?.[toLower];
+
+          if (Number.isFinite(rate)) {
+            labels.push(date);
+            values.push(rate);
+          }
+        }
       }
 
       if (!labels.length) {
@@ -715,7 +763,7 @@
     }
   }
 
-  // ============ 行李 ============
+  // ================= 行李 =================
   function normalizePackingState() {
     state.packing = (state.packing || []).map((x) => ({
       id: x.id || uid("pk"),
@@ -749,19 +797,21 @@
   }
 
   function generatePacking() {
-    const type = $("#pType").value;
-    const climate = $("#pClimate").value;
     const days = Math.max(1, Number($("#pDays").value || 1));
     const laundry = Math.max(1, Number($("#pLaundry").value || 3));
 
     const outfit = Math.max(2, Math.ceil(days / laundry));
     const underwear = Math.max(days, outfit);
     const socks = Math.max(days, outfit);
-    const lightJacket = climate === "cold" ? 2 : 1;
-    const shoes = type === "nature" ? 2 : 1;
-    const slippers = 1;
 
-    const qty = { outfit, underwear, socks, lightJacket, shoes, slippers };
+    const qty = {
+      outfit,
+      underwear,
+      socks,
+      lightJacket: 1,
+      shoes: 1,
+      slippers: 1
+    };
 
     const checkedBase = [
       ...PACKING_TEMPLATE.checked.clothing,
