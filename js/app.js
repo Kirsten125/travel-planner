@@ -1,25 +1,20 @@
 (() => {
-  const FX_API = "https://api.frankfurter.app";
+  // ====== 匯率 API ======
+  // 主 API：fawazahmed0 currency-api（含 TWD + 支援歷史日期）
+  const FX_API = {
+    base: "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
+    latest: "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1"
+  };
+
+  // 備援 API：open.er-api（含 TWD，只有最新匯率）
+  const FX_FALLBACK = "https://open.er-api.com/v6/latest";
+
+  let fxProvider = "fawaz"; // fawaz | erapi | local
 
   const KEYS = {
     itinerary: "travel_itinerary_v2",
     expenses: "travel_expenses_v2",
     packing: "travel_packing_v3"
-  };
-
-  const CURRENCY_ZH = {
-    TWD: "台幣",
-    USD: "美元",
-    EUR: "歐元",
-    JPY: "日圓",
-    GBP: "英鎊",
-    KRW: "韓元",
-    CNY: "人民幣",
-    AUD: "澳幣",
-    CAD: "加幣",
-    CHF: "瑞士法郎",
-    HKD: "港幣",
-    SGD: "新幣"
   };
 
   const PACKING_TEMPLATE = {
@@ -121,7 +116,7 @@
     itinerary: load(KEYS.itinerary, []),
     expenses: load(KEYS.expenses, []),
     packing: load(KEYS.packing, []),
-    currencies: ["TWD", "EUR", "USD", "JPY", "GBP", "KRW", "CNY"]
+    currencies: ["TWD", "USD", "EUR", "JPY", "GBP", "KRW", "CNY"]
   };
 
   const charts = {
@@ -149,9 +144,9 @@
     renderExpenses();
     renderPacking();
 
-    initCurrencies().then(() => {
-      convertCurrency();
-      loadFxTrend();
+    initCurrencies().then(async () => {
+      await convertCurrency();
+      await loadFxTrend();
     });
   }
 
@@ -216,10 +211,10 @@
 
   function initDefaultDates() {
     const t = todayStr();
-    $("#iDate").value = t;
-    $("#eDate").value = t;
-    $("#fxEnd").value = t;
-    $("#fxStart").value = daysAgoStr(30);
+    if ($("#iDate")) $("#iDate").value = t;
+    if ($("#eDate")) $("#eDate").value = t;
+    if ($("#fxEnd")) $("#fxEnd").value = t;
+    if ($("#fxStart")) $("#fxStart").value = daysAgoStr(30);
   }
 
   function initTabs() {
@@ -231,28 +226,29 @@
         btn.classList.add("active");
 
         $$(".tab-panel").forEach((panel) => panel.classList.add("hidden"));
-        $(`#tab-${tab}`).classList.remove("hidden");
+        const target = $(`#tab-${tab}`);
+        if (target) target.classList.remove("hidden");
       });
     });
   }
 
   function bindForms() {
-    $("#itineraryForm").addEventListener("submit", (e) => {
+    $("#itineraryForm")?.addEventListener("submit", (e) => {
       e.preventDefault();
       addItinerary();
     });
 
-    $("#expenseForm").addEventListener("submit", (e) => {
+    $("#expenseForm")?.addEventListener("submit", (e) => {
       e.preventDefault();
       addExpense();
     });
 
-    $("#fxForm").addEventListener("submit", async (e) => {
+    $("#fxForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       await convertCurrency();
     });
 
-    $("#swapBtn").addEventListener("click", async () => {
+    $("#swapBtn")?.addEventListener("click", async () => {
       const from = $("#fxFrom").value;
       const to = $("#fxTo").value;
       $("#fxFrom").value = to;
@@ -261,36 +257,38 @@
       await loadFxTrend();
     });
 
-    $("#fxTrendForm").addEventListener("submit", async (e) => {
+    $("#fxTrendForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       await loadFxTrend();
     });
 
-    $("#packingForm").addEventListener("submit", (e) => {
+    $("#packingForm")?.addEventListener("submit", (e) => {
       e.preventDefault();
       generatePacking();
     });
 
-    $("#addCustomPackingBtn").addEventListener("click", addCustomPacking);
-    $("#clearPackingBtn").addEventListener("click", clearPackingChecks);
+    $("#addCustomPackingBtn")?.addEventListener("click", addCustomPacking);
+    $("#clearPackingBtn")?.addEventListener("click", clearPackingChecks);
 
-    $("#pType").addEventListener("change", updateOtherTypeVisibility);
+    $("#pType")?.addEventListener("change", updateOtherTypeVisibility);
   }
 
   function updateOtherTypeVisibility() {
-    const type = $("#pType").value;
+    const typeEl = $("#pType");
     const field = $("#otherTypeField");
+    if (!typeEl || !field) return;
 
+    const type = typeEl.value;
     if (type === "other") {
       field.classList.remove("hidden");
     } else {
       field.classList.add("hidden");
-      $("#pOtherType").value = "";
+      if ($("#pOtherType")) $("#pOtherType").value = "";
     }
   }
 
   function bindTableActions() {
-    $("#itineraryTbody").addEventListener("click", (e) => {
+    $("#itineraryTbody")?.addEventListener("click", (e) => {
       const deleteBtn = e.target.closest("button[data-delete-id]");
       const editBtn = e.target.closest("button[data-edit-id]");
 
@@ -314,11 +312,12 @@
         $("#iTransport").value = target.transport;
         $("#iNote").value = target.note;
 
-        $("#itineraryForm button[type='submit']").textContent = "更新行程";
+        const submitBtn = $("#itineraryForm button[type='submit']");
+        if (submitBtn) submitBtn.textContent = "更新行程";
       }
     });
 
-    $("#expenseTbody").addEventListener("click", (e) => {
+    $("#expenseTbody")?.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-delete-id]");
       if (!btn) return;
 
@@ -329,7 +328,7 @@
   }
 
   function bindPackingActions() {
-    $("#packingList").addEventListener("change", (e) => {
+    $("#packingList")?.addEventListener("change", (e) => {
       if (e.target.matches("input[type='checkbox'][data-check-id]")) {
         const id = e.target.dataset.checkId;
         const item = state.packing.find((x) => x.id === id);
@@ -342,7 +341,7 @@
       }
     });
 
-    $("#packingList").addEventListener("click", (e) => {
+    $("#packingList")?.addEventListener("click", (e) => {
       const removeBtn = e.target.closest("button[data-remove-id]");
       if (removeBtn) {
         state.packing = state.packing.filter((x) => x.id !== removeBtn.dataset.removeId);
@@ -372,19 +371,18 @@
         item.qty = Math.min(99, Number(item.qty || 1) + 1);
         save(KEYS.packing, state.packing);
         renderPacking();
-        return;
       }
     });
   }
 
   // ============ 行程 ============
   function addItinerary() {
-    const date = $("#iDate").value;
-    const time = $("#iTime").value;
-    const title = $("#iTitle").value.trim();
-    const location = $("#iLocation").value.trim();
-    const transport = $("#iTransport").value.trim();
-    const note = $("#iNote").value.trim();
+    const date = $("#iDate")?.value || "";
+    const time = $("#iTime")?.value || "";
+    const title = ($("#iTitle")?.value || "").trim();
+    const location = ($("#iLocation")?.value || "").trim();
+    const transport = ($("#iTransport")?.value || "").trim();
+    const note = ($("#iNote")?.value || "").trim();
 
     if (!date || !time || !title) return;
 
@@ -401,7 +399,8 @@
       }
 
       editingItineraryId = null;
-      $("#itineraryForm button[type='submit']").textContent = "新增行程";
+      const submitBtn = $("#itineraryForm button[type='submit']");
+      if (submitBtn) submitBtn.textContent = "新增行程";
     } else {
       state.itinerary.push({
         id: uid("it"),
@@ -417,12 +416,14 @@
     save(KEYS.itinerary, state.itinerary);
     renderItinerary();
 
-    $("#itineraryForm").reset();
-    $("#iDate").value = todayStr();
+    $("#itineraryForm")?.reset();
+    if ($("#iDate")) $("#iDate").value = todayStr();
   }
 
   function renderItinerary() {
     const tbody = $("#itineraryTbody");
+    if (!tbody) return;
+
     const rows = [...state.itinerary];
 
     if (!rows.length) {
@@ -450,9 +451,10 @@
     `).join("");
   }
 
-  // ============ 行程拖曳排序 ============
   function initItineraryDragSort() {
     const tbody = $("#itineraryTbody");
+    if (!tbody) return;
+
     let draggingRow = null;
 
     tbody.addEventListener("dragstart", (e) => {
@@ -502,7 +504,10 @@
   }
 
   function persistItineraryOrderFromDOM() {
-    const rows = [...$("#itineraryTbody").querySelectorAll("tr[data-id]")];
+    const tbody = $("#itineraryTbody");
+    if (!tbody) return;
+
+    const rows = [...tbody.querySelectorAll("tr[data-id]")];
     if (!rows.length) return;
 
     const orderIds = rows.map((tr) => tr.dataset.id);
@@ -515,14 +520,14 @@
 
   // ============ 記帳 ============
   function addExpense() {
-    const amount = Number($("#eAmount").value);
+    const amount = Number($("#eAmount")?.value);
     if (!Number.isFinite(amount) || amount < 0) return;
 
     const item = {
       id: uid("ex"),
-      date: $("#eDate").value,
-      name: $("#eItem").value.trim(),
-      category: $("#eCategory").value,
+      date: $("#eDate")?.value || "",
+      name: ($("#eItem")?.value || "").trim(),
+      category: $("#eCategory")?.value || "其他",
       amount
     };
 
@@ -532,12 +537,14 @@
     save(KEYS.expenses, state.expenses);
     renderExpenses();
 
-    $("#expenseForm").reset();
-    $("#eDate").value = todayStr();
+    $("#expenseForm")?.reset();
+    if ($("#eDate")) $("#eDate").value = todayStr();
   }
 
   function renderExpenses() {
     const tbody = $("#expenseTbody");
+    if (!tbody) return;
+
     const rows = [...state.expenses].sort((a, b) => b.date.localeCompare(a.date));
 
     if (!rows.length) {
@@ -568,14 +575,18 @@
     const days = Object.keys(dayMap).length || 1;
     const avg = total / days;
 
-    $("#mTotal").textContent = formatTWD(total);
-    $("#mToday").textContent = formatTWD(today);
-    $("#mAvg").textContent = formatTWD(avg);
+    if ($("#mTotal")) $("#mTotal").textContent = formatTWD(total);
+    if ($("#mToday")) $("#mToday").textContent = formatTWD(today);
+    if ($("#mAvg")) $("#mAvg").textContent = formatTWD(avg);
 
     renderExpenseCharts();
   }
 
   function renderExpenseCharts() {
+    const c1 = $("#categoryChart");
+    const c2 = $("#dailyChart");
+    if (!c1 || !c2 || typeof Chart === "undefined") return;
+
     const catMap = {};
     const dayMap = {};
 
@@ -593,7 +604,7 @@
     if (charts.category) charts.category.destroy();
     if (charts.daily) charts.daily.destroy();
 
-    charts.category = new Chart($("#categoryChart"), {
+    charts.category = new Chart(c1, {
       type: "doughnut",
       data: {
         labels: catLabels.length ? catLabels : ["無資料"],
@@ -606,7 +617,7 @@
       }
     });
 
-    charts.daily = new Chart($("#dailyChart"), {
+    charts.daily = new Chart(c2, {
       type: "line",
       data: {
         labels: dayLabels.length ? dayLabels : ["無資料"],
@@ -627,70 +638,199 @@
 
   // ============ 匯率 ============
   async function initCurrencies() {
+    let symbols = [];
+
+    // 先嘗試主 API（要求：要有 TWD）
     try {
-      const res = await fetch(`${FX_API}/currencies`);
-      if (!res.ok) throw new Error("currency fetch failed");
+      const res = await fetch(`${FX_API.latest}/currencies.json`);
+      if (!res.ok) throw new Error("fawaz currencies failed");
+
       const data = await res.json();
-      state.currencies = Object.keys(data).sort();
+      symbols = Object.keys(data).map((s) => s.toUpperCase());
+
+      if (!symbols.includes("TWD")) {
+        throw new Error("fawaz no TWD");
+      }
+
+      fxProvider = "fawaz";
     } catch {
-      // fallback
+      // 主 API 失敗時改用備援 API
+      try {
+        const res = await fetch(`${FX_FALLBACK}/USD`);
+        if (!res.ok) throw new Error("erapi currencies failed");
+
+        const data = await res.json();
+        symbols = Object.keys(data.rates || {}).map((s) => s.toUpperCase());
+        if (!symbols.includes("USD")) symbols.push("USD");
+        if (!symbols.includes("TWD")) throw new Error("erapi no TWD");
+
+        fxProvider = "erapi";
+      } catch {
+        // 最後本地備援
+        fxProvider = "local";
+        symbols = [
+          "TWD", "USD", "EUR", "JPY", "GBP", "KRW", "CNY",
+          "AUD", "CAD", "CHF", "HKD", "SGD", "NZD", "SEK",
+          "NOK", "DKK", "THB", "MYR", "PHP", "IDR", "INR",
+          "MXN", "BRL", "TRY", "PLN", "CZK", "HUF", "RON",
+          "ZAR", "ILS", "ISK"
+        ];
+      }
     }
 
+    if (!symbols.includes("TWD")) symbols.push("TWD");
+
+    state.currencies = [...new Set(symbols)].sort((a, b) => a.localeCompare(b));
     fillCurrencySelect($("#fxFrom"), state.currencies);
     fillCurrencySelect($("#fxTo"), state.currencies);
 
     if (state.currencies.includes("TWD")) $("#fxFrom").value = "TWD";
     if (state.currencies.includes("EUR")) $("#fxTo").value = "EUR";
+    else if (state.currencies.includes("USD")) $("#fxTo").value = "USD";
   }
 
   function fillCurrencySelect(selectEl, symbols) {
-    selectEl.innerHTML = symbols.map((s) => {
-      const zh = CURRENCY_ZH[s] ? `${CURRENCY_ZH[s]} ` : "";
-      return `<option value="${s}">${zh}${s}</option>`;
-    }).join("");
+    if (!selectEl) return;
+    selectEl.innerHTML = symbols
+      .map((code) => `<option value="${code}">${escapeHTML(currencyLabel(code))}</option>`)
+      .join("");
+  }
+
+  function currencyLabel(code) {
+    const upper = String(code || "").toUpperCase();
+
+    // 明確使用「新臺幣」
+    if (upper === "TWD") return "新臺幣 New Taiwan Dollar (TWD)";
+
+    let zhName = "";
+    let enName = "";
+
+    try {
+      if (Intl.DisplayNames) {
+        const zh = new Intl.DisplayNames(["zh-Hant"], { type: "currency" });
+        const en = new Intl.DisplayNames(["en"], { type: "currency" });
+        zhName = zh.of(upper) || "";
+        enName = en.of(upper) || "";
+      }
+    } catch {
+      // ignore
+    }
+
+    // fallback（少數環境或未知代碼）
+    if (!zhName && !enName) return `${upper}`;
+
+    if (!zhName) return `${enName} (${upper})`;
+    if (!enName) return `${zhName} (${upper})`;
+
+    return `${zhName} ${enName} (${upper})`;
+  }
+
+  async function getLatestRate(from, to) {
+    const f = String(from || "").toUpperCase();
+    const t = String(to || "").toUpperCase();
+
+    if (f === t) return { rate: 1, date: todayStr() };
+
+    if (fxProvider === "fawaz") {
+      const base = f.toLowerCase();
+      const quote = t.toLowerCase();
+      const res = await fetch(`${FX_API.latest}/currencies/${base}.json`);
+      if (!res.ok) throw new Error("fawaz latest failed");
+      const data = await res.json();
+      const rate = data?.[base]?.[quote];
+      if (!Number.isFinite(rate)) throw new Error("fawaz rate missing");
+      return { rate, date: data.date || "" };
+    }
+
+    if (fxProvider === "erapi") {
+      const res = await fetch(`${FX_FALLBACK}/${f}`);
+      if (!res.ok) throw new Error("erapi latest failed");
+      const data = await res.json();
+      const rate = data?.rates?.[t];
+      if (!Number.isFinite(rate)) throw new Error("erapi rate missing");
+      return { rate, date: data.time_last_update_utc || "" };
+    }
+
+    throw new Error("no provider");
   }
 
   async function convertCurrency() {
-    const amount = Number($("#fxAmount").value);
-    const from = $("#fxFrom").value;
-    const to = $("#fxTo").value;
+    const amount = Number($("#fxAmount")?.value);
+    const from = $("#fxFrom")?.value;
+    const to = $("#fxTo")?.value;
 
     if (!Number.isFinite(amount) || amount < 0) {
-      $("#fxResult").textContent = "請輸入正確金額";
-      $("#fxMeta").textContent = "";
+      if ($("#fxResult")) $("#fxResult").textContent = "請輸入正確金額";
+      if ($("#fxMeta")) $("#fxMeta").textContent = "";
       return;
     }
 
-    if (from === to) {
-      $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(amount, to)}`;
-      $("#fxMeta").textContent = `1 ${from} = 1 ${to}`;
+    if (!from || !to) {
+      if ($("#fxResult")) $("#fxResult").textContent = "請先選擇幣別";
+      if ($("#fxMeta")) $("#fxMeta").textContent = "";
       return;
     }
 
     try {
-      const url = `${FX_API}/latest?amount=${encodeURIComponent(amount)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("fx latest failed");
-      const data = await res.json();
+      const { rate, date } = await getLatestRate(from, to);
+      const converted = amount * rate;
 
-      const converted = data?.rates?.[to];
-      if (!converted) throw new Error("rate missing");
+      if ($("#fxResult")) {
+        $("#fxResult").textContent =
+          `${formatCurrency(amount, from)} = ${formatCurrency(converted, to)}`;
+      }
 
-      $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(converted, to)}`;
-      $("#fxMeta").textContent = `匯率日期：${data.date}`;
+      const sourceText =
+        fxProvider === "fawaz"
+          ? "資料來源：currency-api（jsDelivr）"
+          : fxProvider === "erapi"
+            ? "資料來源：open.er-api"
+            : "資料來源：本地備援";
+
+      if ($("#fxMeta")) {
+        $("#fxMeta").textContent =
+          `1 ${from} = ${rate.toFixed(6)} ${to}｜${date ? `日期：${date}｜` : ""}${sourceText}`;
+      }
     } catch {
-      $("#fxResult").textContent = "匯率取得失敗，請稍後再試";
-      $("#fxMeta").textContent = "";
+      if ($("#fxResult")) $("#fxResult").textContent = "匯率取得失敗，請稍後再試";
+      if ($("#fxMeta")) $("#fxMeta").textContent = "";
     }
   }
 
-  async function loadFxTrend() {
-    const from = $("#fxFrom").value;
-    const to = $("#fxTo").value;
-    const start = $("#fxStart").value;
-    const end = $("#fxEnd").value;
+  function enumerateDates(start, end, maxPoints = 120) {
+    const s = new Date(`${start}T00:00:00`);
+    const e = new Date(`${end}T00:00:00`);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || s > e) return [];
 
-    if (!start || !end || start > end) return;
+    const all = [];
+    const d = new Date(s);
+    while (d <= e) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      all.push(`${y}-${m}-${day}`);
+      d.setDate(d.getDate() + 1);
+    }
+
+    if (all.length <= maxPoints) return all;
+
+    const step = Math.ceil(all.length / maxPoints);
+    const sampled = [];
+    for (let i = 0; i < all.length; i += step) sampled.push(all[i]);
+    if (sampled[sampled.length - 1] !== all[all.length - 1]) sampled.push(all[all.length - 1]);
+    return sampled;
+  }
+
+  async function loadFxTrend() {
+    const from = $("#fxFrom")?.value;
+    const to = $("#fxTo")?.value;
+    const start = $("#fxStart")?.value;
+    const end = $("#fxEnd")?.value;
+
+    if (!from || !to || !start || !end || start > end) return;
+    if (!$("#fxChart") || typeof Chart === "undefined") return;
+
+    if (charts.fx) charts.fx.destroy();
 
     try {
       let labels = [];
@@ -699,23 +839,52 @@
       if (from === to) {
         labels = [start, end];
         values = [1, 1];
-      } else {
-        const url = `${FX_API}/${start}..${end}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("fx trend failed");
-        const data = await res.json();
+      } else if (fxProvider === "fawaz") {
+        const dates = enumerateDates(start, end, 120);
+        const base = from.toLowerCase();
+        const quote = to.toLowerCase();
 
-        const rates = data?.rates || {};
-        labels = Object.keys(rates).sort();
-        values = labels.map((d) => rates[d][to]).filter((v) => Number.isFinite(v));
+        for (const dt of dates) {
+          try {
+            const url = `${FX_API.base}@${dt}/v1/currencies/${base}.json`;
+            const res = await fetch(url);
+            if (!res.ok) continue;
+            const data = await res.json();
+            const rate = data?.[base]?.[quote];
+            if (Number.isFinite(rate)) {
+              labels.push(dt);
+              values.push(rate);
+            }
+          } catch {
+            // 略過單日錯誤
+          }
+        }
+
+        // 如果歷史抓不到，至少給最新一筆，避免空圖
+        if (!labels.length) {
+          const { rate } = await getLatestRate(from, to);
+          labels = [start, end];
+          values = [rate, rate];
+        }
+      } else {
+        // 備援 API 沒有區間歷史，使用最新值畫水平線
+        const { rate } = await getLatestRate(from, to);
+        labels = [start, end];
+        values = [rate, rate];
+
+        if ($("#fxMeta")) {
+          const old = $("#fxMeta").textContent || "";
+          const append = "（目前 API 不提供區間歷史，趨勢圖以最新匯率顯示）";
+          if (!old.includes("不提供區間歷史")) {
+            $("#fxMeta").textContent = `${old} ${append}`.trim();
+          }
+        }
       }
 
       if (!labels.length) {
         labels = ["無資料"];
         values = [0];
       }
-
-      if (charts.fx) charts.fx.destroy();
 
       charts.fx = new Chart($("#fxChart"), {
         type: "line",
@@ -734,8 +903,6 @@
         }
       });
     } catch {
-      if (charts.fx) charts.fx.destroy();
-
       charts.fx = new Chart($("#fxChart"), {
         type: "line",
         data: {
@@ -749,13 +916,16 @@
 
   // ============ 行李 ============
   function normalizePackingState() {
-    state.packing = (state.packing || []).map((x) => ({
-      id: x.id || uid("pk"),
-      text: x.text || "",
-      checked: Boolean(x.checked),
-      kind: x.kind || "item",
-      qty: Math.max(1, Number(x.qty || 1))
-    }));
+    state.packing = (state.packing || []).map((x) => {
+      const kind = x.kind || "item";
+      return {
+        id: x.id || uid("pk"),
+        text: x.text || "",
+        checked: Boolean(x.checked),
+        kind,
+        qty: kind === "item" ? Math.max(1, Number(x.qty || 1)) : 1
+      };
+    });
     save(KEYS.packing, state.packing);
   }
 
@@ -787,11 +957,11 @@
   }
 
   function generatePacking() {
-    const type = $("#pType").value;
-    const otherType = $("#pOtherType").value.trim();
-    const climate = $("#pClimate").value;
-    const days = Math.max(1, Number($("#pDays").value || 1));
-    const laundry = Math.max(1, Number($("#pLaundry").value || 3));
+    const type = $("#pType")?.value || "domestic";
+    const otherType = ($("#pOtherType")?.value || "").trim();
+    const climate = $("#pClimate")?.value || "mild";
+    const days = Math.max(1, Number($("#pDays")?.value || 1));
+    const laundry = Math.max(1, Number($("#pLaundry")?.value || 3));
 
     const climateExtras = [];
     if (climate === "cold") climateExtras.push("羽絨外套", "毛帽", "手套", "發熱衣");
@@ -800,7 +970,7 @@
 
     const list = [];
 
-    // 國外旅遊：分託運與手提 + 出發提醒
+    // 國外旅遊：分託運/手提 + 出發前提醒（只有此型態顯示）
     if (type === "international") {
       const checkedItems = dedupeList([...PACKING_TEMPLATE.international.checked, ...climateExtras]);
       const carryItems = dedupeList([...PACKING_TEMPLATE.international.carry]);
@@ -877,7 +1047,7 @@
       return;
     }
 
-    // 其他 或 國內旅遊
+    // 國內旅遊 / 其他
     const base = PACKING_TEMPLATE.domestic.base;
     const clothing = PACKING_TEMPLATE.domestic.clothing;
 
@@ -907,6 +1077,8 @@
 
   function addCustomPacking() {
     const input = $("#customPackingInput");
+    if (!input) return;
+
     const text = input.value.trim();
     if (!text) return;
 
@@ -935,6 +1107,7 @@
 
   function renderPacking() {
     const ul = $("#packingList");
+    if (!ul) return;
 
     if (!state.packing.length) {
       ul.innerHTML = `<li><span class="muted">尚未生成清單，先選條件後按「生成清單」。</span></li>`;
