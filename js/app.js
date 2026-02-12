@@ -4,7 +4,7 @@
   const KEYS = {
     itinerary: "travel_itinerary_v2",
     expenses: "travel_expenses_v2",
-    packing: "travel_packing_v2"
+    packing: "travel_packing_v3"
   };
 
   const CURRENCY_ZH = {
@@ -50,7 +50,24 @@
     },
 
     international: {
-      base: [
+      checked: [
+        "外出衣物",
+        "內衣褲",
+        "襪子",
+        "薄外套",
+        "鞋子",
+        "拖鞋",
+        "雨傘",
+        "衛生紙",
+        "濕紙巾",
+        "牙刷牙膏",
+        "洗面乳",
+        "個人藥品",
+        "化妝品",
+        "防曬乳",
+        "防蚊液"
+      ],
+      carry: [
         "護照",
         "簽證/居留文件",
         "機票/登機證",
@@ -63,22 +80,14 @@
         "轉接頭",
         "行動電源",
         "耳機",
-        "個人藥品",
-        "保險文件"
-      ],
-      clothing: [
-        "外出衣物",
-        "內衣褲",
-        "襪子",
-        "薄外套",
-        "鞋子",
-        "拖鞋"
+        "保險文件",
+        "原子筆"
       ],
       notices: [
-        "行動電源與備用鋰電池不可托運，必須放隨身行李。",
-        "手提液體每瓶需 ≤ 100ml，需放入 1 公升透明密封袋。",
-        "刀具與帶刃物品必須托運。",
-        "打火機通常限制攜帶數量，請依航空公司規定。"
+        "行動電源與備用鋰電池不可托運，必須放手提或隨身行李。",
+        "手提液體每瓶需 ≤ 100ml，且須放入 1 公升可重複密封透明袋。",
+        "刀具與帶刃物品需托運。",
+        "打火機通常以一支為限，仍請以航空公司與目的地規定為準。"
       ]
     },
 
@@ -134,6 +143,7 @@
     initItineraryDragSort();
 
     normalizePackingState();
+    updateOtherTypeVisibility();
 
     renderItinerary();
     renderExpenses();
@@ -263,6 +273,20 @@
 
     $("#addCustomPackingBtn").addEventListener("click", addCustomPacking);
     $("#clearPackingBtn").addEventListener("click", clearPackingChecks);
+
+    $("#pType").addEventListener("change", updateOtherTypeVisibility);
+  }
+
+  function updateOtherTypeVisibility() {
+    const type = $("#pType").value;
+    const field = $("#otherTypeField");
+
+    if (type === "other") {
+      field.classList.remove("hidden");
+    } else {
+      field.classList.add("hidden");
+      $("#pOtherType").value = "";
+    }
   }
 
   function bindTableActions() {
@@ -310,7 +334,7 @@
         const id = e.target.dataset.checkId;
         const item = state.packing.find((x) => x.id === id);
 
-        if (item && (item.kind || "item") === "item") {
+        if (item && item.kind === "item") {
           item.checked = e.target.checked;
           save(KEYS.packing, state.packing);
           renderPacking();
@@ -319,12 +343,37 @@
     });
 
     $("#packingList").addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-remove-id]");
-      if (!btn) return;
+      const removeBtn = e.target.closest("button[data-remove-id]");
+      if (removeBtn) {
+        state.packing = state.packing.filter((x) => x.id !== removeBtn.dataset.removeId);
+        save(KEYS.packing, state.packing);
+        renderPacking();
+        return;
+      }
 
-      state.packing = state.packing.filter((x) => x.id !== btn.dataset.removeId);
-      save(KEYS.packing, state.packing);
-      renderPacking();
+      const minusBtn = e.target.closest("button[data-qty-minus]");
+      if (minusBtn) {
+        const id = minusBtn.dataset.qtyMinus;
+        const item = state.packing.find((x) => x.id === id);
+        if (!item || item.kind !== "item") return;
+
+        item.qty = Math.max(1, Number(item.qty || 1) - 1);
+        save(KEYS.packing, state.packing);
+        renderPacking();
+        return;
+      }
+
+      const plusBtn = e.target.closest("button[data-qty-plus]");
+      if (plusBtn) {
+        const id = plusBtn.dataset.qtyPlus;
+        const item = state.packing.find((x) => x.id === id);
+        if (!item || item.kind !== "item") return;
+
+        item.qty = Math.min(99, Number(item.qty || 1) + 1);
+        save(KEYS.packing, state.packing);
+        renderPacking();
+        return;
+      }
     });
   }
 
@@ -624,10 +673,10 @@
       if (!res.ok) throw new Error("fx latest failed");
       const data = await res.json();
 
-      const rate = data?.rates?.[to];
-      if (!rate) throw new Error("rate missing");
+      const converted = data?.rates?.[to];
+      if (!converted) throw new Error("rate missing");
 
-      $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(rate, to)}`;
+      $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(converted, to)}`;
       $("#fxMeta").textContent = `匯率日期：${data.date}`;
     } catch {
       $("#fxResult").textContent = "匯率取得失敗，請稍後再試";
@@ -704,7 +753,8 @@
       id: x.id || uid("pk"),
       text: x.text || "",
       checked: Boolean(x.checked),
-      kind: x.kind || "item"
+      kind: x.kind || "item",
+      qty: Math.max(1, Number(x.qty || 1))
     }));
     save(KEYS.packing, state.packing);
   }
@@ -721,6 +771,21 @@
     return out;
   }
 
+  function getDefaultQty(text, days, laundry) {
+    const autoClothes = Math.max(2, Math.ceil(days / laundry));
+    const autoUnderwear = Math.max(days, autoClothes);
+
+    if (text === "外出衣物") return autoClothes;
+    if (text === "內衣褲") return autoUnderwear;
+    if (text === "襪子") return autoUnderwear;
+
+    if (text === "薄外套") return 1;
+    if (text === "鞋子") return 1;
+    if (text === "拖鞋") return 1;
+
+    return 1;
+  }
+
   function generatePacking() {
     const type = $("#pType").value;
     const otherType = $("#pOtherType").value.trim();
@@ -728,67 +793,49 @@
     const days = Math.max(1, Number($("#pDays").value || 1));
     const laundry = Math.max(1, Number($("#pLaundry").value || 3));
 
-    const customClothesQty = Number($("#pClothesQty").value);
-    const customUnderwearQty = Number($("#pUnderwearQty").value);
-
-    const autoClothes = Math.max(2, Math.ceil(days / laundry));
-    const autoUnderwear = Math.max(days, autoClothes);
-
-    const clothesQty = Number.isFinite(customClothesQty) && customClothesQty > 0 ? customClothesQty : autoClothes;
-    const underwearQty = Number.isFinite(customUnderwearQty) && customUnderwearQty > 0 ? customUnderwearQty : autoUnderwear;
-
-    let baseList = [];
-    let clothingList = [];
-    let notices = [];
-
-    if (type === "domestic") {
-      baseList = PACKING_TEMPLATE.domestic.base;
-      clothingList = PACKING_TEMPLATE.domestic.clothing;
-    } else if (type === "international") {
-      baseList = PACKING_TEMPLATE.international.base;
-      clothingList = PACKING_TEMPLATE.international.clothing;
-      notices = PACKING_TEMPLATE.international.notices;
-    } else if (type === "business") {
-      baseList = PACKING_TEMPLATE.business.base;
-      clothingList = PACKING_TEMPLATE.business.clothing;
-    } else {
-      baseList = PACKING_TEMPLATE.domestic.base;
-      clothingList = PACKING_TEMPLATE.domestic.clothing;
-    }
-
     const climateExtras = [];
     if (climate === "cold") climateExtras.push("羽絨外套", "毛帽", "手套", "發熱衣");
     if (climate === "hot") climateExtras.push("防曬乳", "太陽眼鏡", "透氣衣物");
     if (climate === "rainy") climateExtras.push("雨傘", "防水外套", "防水鞋套");
 
-    const finalItems = dedupeList([
-      ...(otherType ? [`旅遊類型：${otherType}`] : []),
-      ...baseList,
-      ...climateExtras,
-      ...clothingList.map((x) => {
-        if (x === "外出衣物") return `外出衣物 x ${clothesQty}`;
-        if (x === "內衣褲") return `內衣褲 x ${underwearQty}`;
-        if (x === "襪子") return `襪子 x ${underwearQty}`;
-        return x;
-      })
-    ]);
-
     const list = [];
 
-    list.push({ id: uid("pk"), kind: "section", text: "【行李清單】" });
+    // 國外旅遊：分託運與手提 + 出發提醒
+    if (type === "international") {
+      const checkedItems = dedupeList([...PACKING_TEMPLATE.international.checked, ...climateExtras]);
+      const carryItems = dedupeList([...PACKING_TEMPLATE.international.carry]);
 
-    finalItems.forEach((text) => {
-      list.push({
-        id: uid("pk"),
-        kind: "item",
-        text,
-        checked: false
+      if (otherType) {
+        list.push({ id: uid("pk"), kind: "section", text: `【旅遊類型】${otherType}` });
+      }
+
+      list.push({ id: uid("pk"), kind: "section", text: "【託運行李】" });
+
+      checkedItems.forEach((text) => {
+        list.push({
+          id: uid("pk"),
+          kind: "item",
+          text,
+          checked: false,
+          qty: getDefaultQty(text, days, laundry)
+        });
       });
-    });
 
-    if (type === "international" && notices.length) {
+      list.push({ id: uid("pk"), kind: "section", text: "【手提行李】" });
+
+      carryItems.forEach((text) => {
+        list.push({
+          id: uid("pk"),
+          kind: "item",
+          text,
+          checked: false,
+          qty: 1
+        });
+      });
+
       list.push({ id: uid("pk"), kind: "section", text: "【出發前提醒】" });
-      notices.forEach((text) => {
+
+      PACKING_TEMPLATE.international.notices.forEach((text) => {
         list.push({
           id: uid("pk"),
           kind: "note",
@@ -796,7 +843,62 @@
           checked: false
         });
       });
+
+      state.packing = list;
+      save(KEYS.packing, state.packing);
+      renderPacking();
+      return;
     }
+
+    // 商務出差
+    if (type === "business") {
+      const items = dedupeList([
+        ...(otherType ? [`旅遊類型：${otherType}`] : []),
+        ...PACKING_TEMPLATE.business.base,
+        ...PACKING_TEMPLATE.business.clothing,
+        ...climateExtras
+      ]);
+
+      list.push({ id: uid("pk"), kind: "section", text: "【行李清單】" });
+
+      items.forEach((text) => {
+        list.push({
+          id: uid("pk"),
+          kind: "item",
+          text,
+          checked: false,
+          qty: getDefaultQty(text, days, laundry)
+        });
+      });
+
+      state.packing = list;
+      save(KEYS.packing, state.packing);
+      renderPacking();
+      return;
+    }
+
+    // 其他 或 國內旅遊
+    const base = PACKING_TEMPLATE.domestic.base;
+    const clothing = PACKING_TEMPLATE.domestic.clothing;
+
+    const items = dedupeList([
+      ...(otherType ? [`旅遊類型：${otherType}`] : []),
+      ...base,
+      ...clothing,
+      ...climateExtras
+    ]);
+
+    list.push({ id: uid("pk"), kind: "section", text: "【行李清單】" });
+
+    items.forEach((text) => {
+      list.push({
+        id: uid("pk"),
+        kind: "item",
+        text,
+        checked: false,
+        qty: getDefaultQty(text, days, laundry)
+      });
+    });
 
     state.packing = list;
     save(KEYS.packing, state.packing);
@@ -812,7 +914,8 @@
       id: uid("pk"),
       kind: "item",
       text,
-      checked: false
+      checked: false,
+      qty: 1
     });
 
     save(KEYS.packing, state.packing);
@@ -823,8 +926,9 @@
   function clearPackingChecks() {
     state.packing = state.packing.map((x) => ({
       ...x,
-      checked: (x.kind || "item") === "item" ? false : Boolean(x.checked)
+      checked: x.kind === "item" ? false : Boolean(x.checked)
     }));
+
     save(KEYS.packing, state.packing);
     renderPacking();
   }
@@ -838,9 +942,7 @@
     }
 
     ul.innerHTML = state.packing.map((item) => {
-      const kind = item.kind || "item";
-
-      if (kind === "section") {
+      if (item.kind === "section") {
         return `
           <li class="section-row">
             <strong>${escapeHTML(item.text)}</strong>
@@ -848,7 +950,7 @@
         `;
       }
 
-      if (kind === "note") {
+      if (item.kind === "note") {
         return `
           <li class="note-row">
             <span>${escapeHTML(item.text)}</span>
@@ -856,10 +958,19 @@
         `;
       }
 
+      const qty = Math.max(1, Number(item.qty || 1));
+
       return `
         <li>
           <input type="checkbox" data-check-id="${item.id}" ${item.checked ? "checked" : ""} />
           <span class="${item.checked ? "done" : ""}">${escapeHTML(item.text)}</span>
+
+          <div class="qty-box">
+            <button class="qty-btn" data-qty-minus="${item.id}">-</button>
+            <span class="qty-num">${qty}</span>
+            <button class="qty-btn" data-qty-plus="${item.id}">+</button>
+          </div>
+
           <button class="remove-item" data-remove-id="${item.id}">刪除</button>
         </li>
       `;
