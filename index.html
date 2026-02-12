@@ -193,7 +193,7 @@
         </form>
 
         <div class="result-card">
-          <p id="fxResult">請輸入金額並按「立即換算」</p>
+          <p id="fxResult" class="fx-big-result">請輸入金額並按「立即換算」</p>
           <p id="fxMeta" class="muted"></p>
         </div>
 
@@ -213,27 +213,33 @@
           <button class="primary-btn full" type="submit">更新趨勢圖</button>
         </form>
 
-        <div class="chart-card fx-chart">
+        <div class="chart-card">
           <canvas id="fxChart"></canvas>
         </div>
 
-        <p class="muted">提醒：趨勢圖範圍請不要超過 90 天，避免 API 請求過多。</p>
+        <p class="muted">備註：匯率 API 來源 frankfurter.app。</p>
       </div>
     </section>
 
     <!-- 行李 -->
     <section id="tab-packing" class="tab-panel hidden">
-      <div class="panel">
+      <div class="panel packing-panel">
         <h2>旅行行李清單生成器</h2>
 
-        <form id="packingForm" class="form-grid">
+        <form id="packingForm" class="packing-grid">
           <div class="field">
-            <label>旅行型態</label>
+            <label>旅遊型態</label>
             <select id="pType">
-              <option value="city">城市旅遊</option>
-              <option value="nature">戶外自然</option>
-              <option value="business">工作/面試</option>
+              <option value="domestic">國內旅遊</option>
+              <option value="international">國外旅遊</option>
+              <option value="business">商務出差</option>
+              <option value="other">其他（可選填）</option>
             </select>
+          </div>
+
+          <div class="field">
+            <label>其他類型（可空白）</label>
+            <input type="text" id="pOtherType" placeholder="例如：環島機車旅行" />
           </div>
 
           <div class="field">
@@ -252,14 +258,24 @@
           </div>
 
           <div class="field">
+            <label>衣物數量（可不填）</label>
+            <input type="number" id="pClothesQty" min="0" placeholder="例如：7" />
+          </div>
+
+          <div class="field">
+            <label>內衣襪數量（可不填）</label>
+            <input type="number" id="pUnderwearQty" min="0" placeholder="例如：7" />
+          </div>
+
+          <div class="field">
             <label>幾天洗一次衣服</label>
             <input type="number" id="pLaundry" min="1" value="3" />
           </div>
 
-          <button class="primary-btn full" type="submit">生成清單</button>
+          <button class="primary-btn packing-btn" type="submit">生成清單</button>
         </form>
 
-        <div class="inline-add">
+        <div class="packing-actions">
           <input type="text" id="customPackingInput" placeholder="自訂新增物品，例如：相機電池" />
           <button type="button" class="secondary-btn" id="addCustomPackingBtn">新增</button>
           <button type="button" class="danger-btn" id="clearPackingBtn">取消全部勾選</button>
