@@ -43,10 +43,12 @@ html, body {
   padding: 28px 16px 14px;
   color: #f8fafc;
 }
+
 .app-header h1 {
   margin: 0;
   font-size: clamp(1.4rem, 2.4vw, 2.1rem);
 }
+
 .app-header p {
   margin: 8px 0 0;
   color: #cbd5e1;
@@ -74,6 +76,7 @@ html, body {
   cursor: pointer;
   white-space: nowrap;
 }
+
 .tab-btn.active {
   background: #f8fafc;
   color: #0f172a;
@@ -104,6 +107,7 @@ h2 {
   margin-top: 2px;
   margin-bottom: 14px;
 }
+
 h3 {
   margin: 14px 0 10px;
 }
@@ -120,6 +124,7 @@ h3 {
   flex-direction: column;
   gap: 6px;
 }
+
 .field label {
   font-size: 0.9rem;
   color: #334155;
@@ -140,6 +145,10 @@ input:focus, select:focus {
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
 }
 
+.hidden {
+  display: none !important;
+}
+
 .full {
   grid-column: 1 / -1;
 }
@@ -156,6 +165,7 @@ input:focus, select:focus {
   background: var(--primary);
   color: #fff;
 }
+
 .primary-btn:hover {
   background: var(--primary-dark);
 }
@@ -190,8 +200,8 @@ input:focus, select:focus {
 }
 
 .fx-big-result {
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-size: 1.4rem;
+  font-weight: 900;
   margin: 6px 0;
 }
 
@@ -288,6 +298,61 @@ th {
   cursor: pointer;
 }
 
+/* 拖曳排序 UI */
+.drag-cell {
+  width: 70px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+  font-size: 18px;
+  line-height: 1;
+  margin-left: 6px;
+}
+
+#itineraryTbody tr.dragging {
+  opacity: 0.45;
+  background: #eff6ff;
+}
+
+#itineraryTbody tr .drag-handle:active {
+  cursor: grabbing;
+}
+
+/* 行李清單 */
+.packing-panel {
+  text-align: left;
+}
+
+.packing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: end;
+}
+
+.packing-btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+  width: 220px;
+}
+
+.packing-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.packing-actions input {
+  width: min(420px, 100%);
+}
+
 .check-list {
   list-style: none;
   padding: 0;
@@ -320,91 +385,65 @@ th {
   cursor: pointer;
 }
 
-/* 拖曳排序 UI */
-.drag-cell {
-  width: 70px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.drag-handle {
-  cursor: grab;
-  user-select: none;
-  font-size: 18px;
-  line-height: 1;
-  margin-left: 6px;
-}
-
-#itineraryTbody tr.dragging {
-  opacity: 0.45;
-  background: #eff6ff;
-}
-
-#itineraryTbody tr .drag-handle:active {
-  cursor: grabbing;
-}
-
-/* 行李清單重新排版 */
-.packing-panel {
-  text-align: right;
-}
-
-.packing-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-  justify-items: end;
-}
-
-.packing-grid .field {
-  width: 100%;
-  max-width: 280px;
-  text-align: right;
-}
-
-.packing-btn {
-  grid-column: 1 / -1;
-  justify-self: end;
-  width: 200px;
-}
-
-.packing-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.packing-actions input {
-  width: min(420px, 100%);
-}
-
+/* 分區標題 */
 .check-list li.section-row {
-  justify-content: flex-end;
   background: #f8fafc;
   border: 1px dashed #cbd5e1;
-  font-weight: 700;
+  font-weight: 900;
 }
 
+/* 出發提醒 */
 .check-list li.note-row {
-  justify-content: flex-end;
   background: #fff7ed;
   border: 1px solid #fed7aa;
   color: #9a3412;
 }
 
+/* 數量調整 */
+.qty-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.qty-btn {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 10px;
+  width: 34px;
+  height: 30px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.qty-num {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* checkbox */
+.check-list input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+/* 手機版 */
 @media (max-width: 1024px) {
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .packing-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .metrics {
     grid-template-columns: 1fr;
   }
+
   .chart-grid {
     grid-template-columns: 1fr;
   }
@@ -414,12 +453,11 @@ th {
   .form-grid {
     grid-template-columns: 1fr;
   }
+
   .packing-grid {
     grid-template-columns: 1fr;
   }
-  .tabs {
-    padding: 10px;
-  }
+
   .panel {
     padding: 14px;
   }
