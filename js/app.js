@@ -1,7 +1,6 @@
 (() => {
   const FX_API = "https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1";
 
-  // 常用幣別中文名稱
   const CURRENCY_ZH = {
     twd: "新臺幣",
     usd: "美金",
@@ -797,6 +796,8 @@
   }
 
   function generatePacking() {
+    const type = $("#pType").value;
+    const climate = $("#pClimate").value;
     const days = Math.max(1, Number($("#pDays").value || 1));
     const laundry = Math.max(1, Number($("#pLaundry").value || 3));
 
@@ -804,12 +805,18 @@
     const underwear = Math.max(days, outfit);
     const socks = Math.max(days, outfit);
 
+    let lightJacket = 1;
+    let shoes = 1;
+
+    if (climate === "cold") lightJacket = 2;
+    if (type === "nature") shoes = 2;
+
     const qty = {
       outfit,
       underwear,
       socks,
-      lightJacket: 1,
-      shoes: 1,
+      lightJacket,
+      shoes,
       slippers: 1
     };
 
@@ -825,7 +832,17 @@
       ...PACKING_TEMPLATE.carry.electronics
     ]);
 
-    const checkedItems = dedupeList(checkedBase);
+    const extra = [];
+
+    if (type === "city") extra.push("行程票券截圖", "小型側背包");
+    if (type === "nature") extra.push("保溫水壺", "輕量雨衣");
+    if (type === "business") extra.push("正式服裝", "筆電", "履歷文件");
+
+    if (climate === "cold") extra.push("羽絨外套", "毛帽", "手套", "發熱衣");
+    if (climate === "hot") extra.push("防曬乳", "太陽眼鏡", "透氣衣物");
+    if (climate === "rainy") extra.push("雨傘", "防水外套", "防水鞋套");
+
+    const checkedItems = dedupeList([...checkedBase, ...extra]);
     const carryItems = dedupeList(carryBase);
 
     const list = [];
