@@ -1,30 +1,5 @@
 (() => {
-  const FX_API = "https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1";
-
-  const CURRENCY_ZH = {
-    twd: "新臺幣",
-    usd: "美金",
-    eur: "歐元",
-    jpy: "日圓",
-    gbp: "英鎊",
-    krw: "韓元",
-    cny: "人民幣",
-    hkd: "港幣",
-    sgd: "新加坡幣",
-    aud: "澳幣",
-    cad: "加幣",
-    chf: "瑞士法郎",
-    sek: "瑞典克朗",
-    nok: "挪威克朗",
-    dkk: "丹麥克朗",
-    nzd: "紐幣",
-    thb: "泰銖",
-    myr: "馬來西亞幣",
-    php: "菲律賓披索",
-    idr: "印尼盾",
-    inr: "印度盧比",
-    vnd: "越南盾"
-  };
+  const FX_API = "https://api.frankfurter.app";
 
   const KEYS = {
     itinerary: "travel_itinerary_v2",
@@ -32,98 +7,112 @@
     packing: "travel_packing_v2"
   };
 
+  const CURRENCY_ZH = {
+    TWD: "台幣",
+    USD: "美元",
+    EUR: "歐元",
+    JPY: "日圓",
+    GBP: "英鎊",
+    KRW: "韓元",
+    CNY: "人民幣",
+    AUD: "澳幣",
+    CAD: "加幣",
+    CHF: "瑞士法郎",
+    HKD: "港幣",
+    SGD: "新幣"
+  };
+
   const PACKING_TEMPLATE = {
-    checked: {
-      clothing: [
-        "外出衣物N套",
-        "內衣褲N套",
-        "薄外套N件",
-        "襪子N雙",
-        "鞋子N雙",
-        "拖鞋N雙",
-        "帽子",
-        "墨鏡",
-        "飾品"
-      ],
-      daily: [
+    domestic: {
+      base: [
+        "身分證",
+        "健保卡",
+        "現金/信用卡",
+        "手機",
+        "充電器",
+        "行動電源",
+        "耳機",
         "雨傘",
         "衛生紙",
         "濕紙巾",
-        "衛生棉",
-        "備用塑膠袋",
-        "眼鏡",
-        "隱形眼鏡",
-        "隱眼水盒",
-        "髮圈",
-        "化妝品",
-        "防曬乳",
-        "防蚊液"
+        "牙刷牙膏",
+        "洗面乳",
+        "個人藥品"
       ],
-      toiletries: [
-        "牙膏",
-        "牙刷",
-        "沐浴乳",
-        "洗髮精",
-        "卸妝油",
-        "卸妝棉",
-        "刮鬍刀",
-        "梳子",
-        "乳液",
-        "化妝水",
-        "毛巾",
-        "浴巾"
+      clothing: [
+        "外出衣物",
+        "內衣褲",
+        "襪子",
+        "薄外套",
+        "鞋子",
+        "拖鞋"
       ]
     },
-    carry: {
-      docs: [
-        "身分證正本",
-        "身分證影本",
-        "護照正本",
-        "護照影本",
-        "簽證（入境用）",
-        "機票",
-        "登機證",
-        "原子筆",
-        "錢包",
-        "當地貨幣",
+
+    international: {
+      base: [
+        "護照",
+        "簽證/居留文件",
+        "機票/登機證",
         "信用卡",
+        "當地貨幣",
         "SIM卡",
         "SIM卡針",
-        "預購票券",
-        "鑰匙"
-      ],
-      essentials: [
-        "隨身藥品",
-        "急救包",
-        "眼罩",
-        "頸枕",
-        "耳塞"
-      ],
-      electronics: [
         "手機",
-        "SIM卡",
-        "SIM卡針",
-        "耳機",
-        "充電線",
+        "充電器",
+        "轉接頭",
         "行動電源",
-        "平板",
-        "相機"
+        "耳機",
+        "個人藥品",
+        "保險文件"
+      ],
+      clothing: [
+        "外出衣物",
+        "內衣褲",
+        "襪子",
+        "薄外套",
+        "鞋子",
+        "拖鞋"
+      ],
+      notices: [
+        "行動電源與備用鋰電池不可托運，必須放隨身行李。",
+        "手提液體每瓶需 ≤ 100ml，需放入 1 公升透明密封袋。",
+        "刀具與帶刃物品必須托運。",
+        "打火機通常限制攜帶數量，請依航空公司規定。"
       ]
     },
-    notices: [
-      "行動電源與備用鋰電池不可拖運，必須放手提或隨身行李。",
-      "手提液體每瓶需 ≤ 100ml，且須放入 1 公升可重複密封透明袋。",
-      "刀具與帶刃物品需托運。",
-      "打火機通常以一支為限，仍請以航空公司與目的地規定為準。"
-    ]
+
+    business: {
+      base: [
+        "筆電",
+        "筆電充電器",
+        "公司文件/合約",
+        "名片",
+        "正式服裝",
+        "皮鞋",
+        "手機",
+        "充電器",
+        "行動電源",
+        "耳機",
+        "錢包/信用卡",
+        "原子筆"
+      ],
+      clothing: [
+        "正式服裝",
+        "襯衫",
+        "內衣褲",
+        "襪子",
+        "薄外套",
+        "皮鞋"
+      ]
+    }
   };
 
   const state = {
     itinerary: load(KEYS.itinerary, []),
     expenses: load(KEYS.expenses, []),
     packing: load(KEYS.packing, []),
-    currencies: ["TWD", "USD", "EUR", "JPY", "GBP", "KRW", "CNY"],
-    currencyNameMap: {}
+    currencies: ["TWD", "EUR", "USD", "JPY", "GBP", "KRW", "CNY"]
   };
 
   const charts = {
@@ -339,7 +328,7 @@
     });
   }
 
-  // ================= 行程 =================
+  // ============ 行程 ============
   function addItinerary() {
     const date = $("#iDate").value;
     const time = $("#iTime").value;
@@ -392,9 +381,10 @@
       return;
     }
 
-    tbody.innerHTML = rows.map((r) => `
+    tbody.innerHTML = rows.map((r, idx) => `
       <tr data-id="${r.id}" draggable="true">
         <td class="drag-cell" title="拖曳排序">
+          <strong>${idx + 1}</strong>
           <span class="drag-handle">☰</span>
         </td>
         <td>${escapeHTML(r.date)}</td>
@@ -411,6 +401,7 @@
     `).join("");
   }
 
+  // ============ 行程拖曳排序 ============
   function initItineraryDragSort() {
     const tbody = $("#itineraryTbody");
     let draggingRow = null;
@@ -473,7 +464,7 @@
     renderItinerary();
   }
 
-  // ================= 記帳 =================
+  // ============ 記帳 ============
   function addExpense() {
     const amount = Number($("#eAmount").value);
     if (!Number.isFinite(amount) || amount < 0) return;
@@ -515,7 +506,6 @@
     }
 
     const total = state.expenses.reduce((sum, x) => sum + Number(x.amount || 0), 0);
-
     const t = todayStr();
     const today = state.expenses
       .filter((x) => x.date === t)
@@ -548,7 +538,6 @@
 
     const catLabels = Object.keys(catMap);
     const catData = Object.values(catMap);
-
     const dayLabels = Object.keys(dayMap).sort();
     const dayData = dayLabels.map((d) => dayMap[d]);
 
@@ -587,44 +576,28 @@
     });
   }
 
-  // ================= 匯率 =================
+  // ============ 匯率 ============
   async function initCurrencies() {
     try {
-      const res = await fetch(`${FX_API}/latest/currencies.json`);
-      if (!res.ok) throw new Error("currencies fetch failed");
-
+      const res = await fetch(`${FX_API}/currencies`);
+      if (!res.ok) throw new Error("currency fetch failed");
       const data = await res.json();
-      state.currencyNameMap = data;
-
-      state.currencies = Object.keys(data)
-        .map((x) => x.toUpperCase())
-        .sort();
-
-      if (!state.currencies.includes("TWD")) state.currencies.unshift("TWD");
+      state.currencies = Object.keys(data).sort();
     } catch {
-      state.currencies = ["TWD", "USD", "EUR", "JPY", "GBP", "KRW", "CNY"];
+      // fallback
     }
 
     fillCurrencySelect($("#fxFrom"), state.currencies);
     fillCurrencySelect($("#fxTo"), state.currencies);
 
-    $("#fxFrom").value = "TWD";
-    $("#fxTo").value = "USD";
-  }
-
-  function currencyLabel(code) {
-    const lower = code.toLowerCase();
-    const zh = CURRENCY_ZH[lower];
-    const en = state.currencyNameMap?.[lower];
-
-    if (zh) return `${zh} ${code}`;
-    if (en) return `${en} ${code}`;
-    return code;
+    if (state.currencies.includes("TWD")) $("#fxFrom").value = "TWD";
+    if (state.currencies.includes("EUR")) $("#fxTo").value = "EUR";
   }
 
   function fillCurrencySelect(selectEl, symbols) {
-    selectEl.innerHTML = symbols.map((code) => {
-      return `<option value="${code}">${currencyLabel(code)}</option>`;
+    selectEl.innerHTML = symbols.map((s) => {
+      const zh = CURRENCY_ZH[s] ? `${CURRENCY_ZH[s]} ` : "";
+      return `<option value="${s}">${zh}${s}</option>`;
     }).join("");
   }
 
@@ -646,42 +619,20 @@
     }
 
     try {
-      const fromLower = from.toLowerCase();
-      const toLower = to.toLowerCase();
-
-      const url = `${FX_API}/latest/currencies/${fromLower}/${toLower}.json`;
+      const url = `${FX_API}/latest?amount=${encodeURIComponent(amount)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error("fx fetch failed");
-
+      if (!res.ok) throw new Error("fx latest failed");
       const data = await res.json();
-      const rate = data?.[toLower];
 
-      if (!Number.isFinite(rate)) throw new Error("rate missing");
+      const rate = data?.rates?.[to];
+      if (!rate) throw new Error("rate missing");
 
-      const converted = amount * rate;
-
-      $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(converted, to)}`;
-      $("#fxMeta").textContent = `匯率日期：${data.date}｜1 ${from} = ${rate.toFixed(6)} ${to}`;
+      $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(rate, to)}`;
+      $("#fxMeta").textContent = `匯率日期：${data.date}`;
     } catch {
       $("#fxResult").textContent = "匯率取得失敗，請稍後再試";
       $("#fxMeta").textContent = "";
     }
-  }
-
-  function buildDateList(start, end) {
-    const list = [];
-    const s = new Date(start);
-    const e = new Date(end);
-
-    while (s <= e) {
-      const y = s.getFullYear();
-      const m = String(s.getMonth() + 1).padStart(2, "0");
-      const d = String(s.getDate()).padStart(2, "0");
-      list.push(`${y}-${m}-${d}`);
-      s.setDate(s.getDate() + 1);
-    }
-
-    return list;
   }
 
   async function loadFxTrend() {
@@ -692,13 +643,6 @@
 
     if (!start || !end || start > end) return;
 
-    const dateList = buildDateList(start, end);
-
-    if (dateList.length > 90) {
-      $("#fxMeta").textContent = "趨勢圖日期範圍請控制在 90 天內（避免 API 過多請求）";
-      return;
-    }
-
     try {
       let labels = [];
       let values = [];
@@ -707,22 +651,14 @@
         labels = [start, end];
         values = [1, 1];
       } else {
-        const fromLower = from.toLowerCase();
-        const toLower = to.toLowerCase();
+        const url = `${FX_API}/${start}..${end}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("fx trend failed");
+        const data = await res.json();
 
-        for (const date of dateList) {
-          const url = `${FX_API}/${date}/currencies/${fromLower}/${toLower}.json`;
-          const res = await fetch(url);
-          if (!res.ok) continue;
-
-          const data = await res.json();
-          const rate = data?.[toLower];
-
-          if (Number.isFinite(rate)) {
-            labels.push(date);
-            values.push(rate);
-          }
-        }
+        const rates = data?.rates || {};
+        labels = Object.keys(rates).sort();
+        values = labels.map((d) => rates[d][to]).filter((v) => Number.isFinite(v));
       }
 
       if (!labels.length) {
@@ -762,7 +698,7 @@
     }
   }
 
-  // ================= 行李 =================
+  // ============ 行李 ============
   function normalizePackingState() {
     state.packing = (state.packing || []).map((x) => ({
       id: x.id || uid("pk"),
@@ -771,16 +707,6 @@
       kind: x.kind || "item"
     }));
     save(KEYS.packing, state.packing);
-  }
-
-  function quantityTextByTemplate(text, qty) {
-    if (text === "外出衣物N套") return `外出衣物 x ${qty.outfit} 套`;
-    if (text === "內衣褲N套") return `內衣褲 x ${qty.underwear} 套`;
-    if (text === "薄外套N件") return `薄外套 x ${qty.lightJacket} 件`;
-    if (text === "襪子N雙") return `襪子 x ${qty.socks} 雙`;
-    if (text === "鞋子N雙") return `鞋子 x ${qty.shoes} 雙`;
-    if (text === "拖鞋N雙") return `拖鞋 x ${qty.slippers} 雙`;
-    return text;
   }
 
   function dedupeList(arr) {
@@ -797,85 +723,80 @@
 
   function generatePacking() {
     const type = $("#pType").value;
+    const otherType = $("#pOtherType").value.trim();
     const climate = $("#pClimate").value;
     const days = Math.max(1, Number($("#pDays").value || 1));
     const laundry = Math.max(1, Number($("#pLaundry").value || 3));
 
-    const outfit = Math.max(2, Math.ceil(days / laundry));
-    const underwear = Math.max(days, outfit);
-    const socks = Math.max(days, outfit);
+    const customClothesQty = Number($("#pClothesQty").value);
+    const customUnderwearQty = Number($("#pUnderwearQty").value);
 
-    let lightJacket = 1;
-    let shoes = 1;
+    const autoClothes = Math.max(2, Math.ceil(days / laundry));
+    const autoUnderwear = Math.max(days, autoClothes);
 
-    if (climate === "cold") lightJacket = 2;
-    if (type === "nature") shoes = 2;
+    const clothesQty = Number.isFinite(customClothesQty) && customClothesQty > 0 ? customClothesQty : autoClothes;
+    const underwearQty = Number.isFinite(customUnderwearQty) && customUnderwearQty > 0 ? customUnderwearQty : autoUnderwear;
 
-    const qty = {
-      outfit,
-      underwear,
-      socks,
-      lightJacket,
-      shoes,
-      slippers: 1
-    };
+    let baseList = [];
+    let clothingList = [];
+    let notices = [];
 
-    const checkedBase = [
-      ...PACKING_TEMPLATE.checked.clothing,
-      ...PACKING_TEMPLATE.checked.daily,
-      ...PACKING_TEMPLATE.checked.toiletries
-    ].map((t) => quantityTextByTemplate(t, qty));
+    if (type === "domestic") {
+      baseList = PACKING_TEMPLATE.domestic.base;
+      clothingList = PACKING_TEMPLATE.domestic.clothing;
+    } else if (type === "international") {
+      baseList = PACKING_TEMPLATE.international.base;
+      clothingList = PACKING_TEMPLATE.international.clothing;
+      notices = PACKING_TEMPLATE.international.notices;
+    } else if (type === "business") {
+      baseList = PACKING_TEMPLATE.business.base;
+      clothingList = PACKING_TEMPLATE.business.clothing;
+    } else {
+      baseList = PACKING_TEMPLATE.domestic.base;
+      clothingList = PACKING_TEMPLATE.domestic.clothing;
+    }
 
-    const carryBase = dedupeList([
-      ...PACKING_TEMPLATE.carry.docs,
-      ...PACKING_TEMPLATE.carry.essentials,
-      ...PACKING_TEMPLATE.carry.electronics
+    const climateExtras = [];
+    if (climate === "cold") climateExtras.push("羽絨外套", "毛帽", "手套", "發熱衣");
+    if (climate === "hot") climateExtras.push("防曬乳", "太陽眼鏡", "透氣衣物");
+    if (climate === "rainy") climateExtras.push("雨傘", "防水外套", "防水鞋套");
+
+    const finalItems = dedupeList([
+      ...(otherType ? [`旅遊類型：${otherType}`] : []),
+      ...baseList,
+      ...climateExtras,
+      ...clothingList.map((x) => {
+        if (x === "外出衣物") return `外出衣物 x ${clothesQty}`;
+        if (x === "內衣褲") return `內衣褲 x ${underwearQty}`;
+        if (x === "襪子") return `襪子 x ${underwearQty}`;
+        return x;
+      })
     ]);
-
-    const extra = [];
-
-    if (type === "city") extra.push("行程票券截圖", "小型側背包");
-    if (type === "nature") extra.push("保溫水壺", "輕量雨衣");
-    if (type === "business") extra.push("正式服裝", "筆電", "履歷文件");
-
-    if (climate === "cold") extra.push("羽絨外套", "毛帽", "手套", "發熱衣");
-    if (climate === "hot") extra.push("防曬乳", "太陽眼鏡", "透氣衣物");
-    if (climate === "rainy") extra.push("雨傘", "防水外套", "防水鞋套");
-
-    const checkedItems = dedupeList([...checkedBase, ...extra]);
-    const carryItems = dedupeList(carryBase);
 
     const list = [];
 
-    list.push({ id: uid("pk"), kind: "section", text: "【託運行李】" });
-    checkedItems.forEach((text) => {
+    list.push({ id: uid("pk"), kind: "section", text: "【行李清單】" });
+
+    finalItems.forEach((text) => {
       list.push({
         id: uid("pk"),
         kind: "item",
-        text: `[託運] ${text}`,
+        text,
         checked: false
       });
     });
 
-    list.push({ id: uid("pk"), kind: "section", text: "【手提／隨身行李】" });
-    carryItems.forEach((text) => {
-      list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: `[手提] ${text}`,
-        checked: false
+    if (type === "international" && notices.length) {
+      list.push({ id: uid("pk"), kind: "section", text: "【出發前提醒】" });
+      notices.forEach((text) => {
+        list.push({
+          id: uid("pk"),
+          kind: "note",
+          text: `⚠ ${text}`,
+          checked: false
+        });
       });
-    });
-
-    list.push({ id: uid("pk"), kind: "section", text: "【出發前提醒】" });
-    PACKING_TEMPLATE.notices.forEach((text) => {
-      list.push({
-        id: uid("pk"),
-        kind: "note",
-        text: `⚠ ${text}`,
-        checked: false
-      });
-    });
+    }
 
     state.packing = list;
     save(KEYS.packing, state.packing);
@@ -890,7 +811,7 @@
     state.packing.push({
       id: uid("pk"),
       kind: "item",
-      text: `[自訂] ${text}`,
+      text,
       checked: false
     });
 
