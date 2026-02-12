@@ -1,14 +1,13 @@
 (() => {
   // ========= 匯率 API =========
-  // 支援 TWD 且可取歷史資料
   const FX_API = {
     latest: "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies",
     date: (yyyy_mm_dd) =>
       `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${yyyy_mm_dd}/v1/currencies`
   };
 
-  const FX_AUTO_REFRESH_MS = 60 * 1000; // 60 秒
-  const FX_TREND_AUTO_EVERY = 5; // 每 5 次自動更新重抓一次趨勢
+  const FX_AUTO_REFRESH_MS = 60 * 1000;
+  const FX_TREND_AUTO_EVERY = 5;
 
   const PRIORITY_CURRENCIES = ["TWD", "USD", "EUR", "JPY", "CNY", "KRW", "GBP", "HKD"];
 
@@ -49,13 +48,15 @@
   };
 
   const KEYS = {
-    itinerary: "travel_itinerary_v4",
-    expenses: "travel_expenses_v4",
-    packing: "travel_packing_v4"
+    itinerary: "travel_itinerary_v5",
+    itineraryCollapsed: "travel_itinerary_day_collapsed_v1",
+    expenses: "travel_expenses_v5",
+    packing: "travel_packing_v5"
   };
 
   const state = {
     itinerary: load(KEYS.itinerary, []),
+    itineraryCollapsed: load(KEYS.itineraryCollapsed, {}),
     expenses: load(KEYS.expenses, []),
     packing: load(KEYS.packing, []),
     currencies: []
@@ -83,6 +84,7 @@
 
     normalizePackingState();
     updateOtherTypeVisibility();
+    cleanupCollapsedDates();
 
     renderItinerary();
     renderExpenses();
@@ -314,11 +316,19 @@
 
   function bindTableActions() {
     $("#itineraryTbody")?.addEventListener("click", (e) => {
+      const toggleBtn = e.target.closest("button[data-toggle-date]");
+      if (toggleBtn) {
+        const date = toggleBtn.dataset.toggleDate;
+        toggleDayCollapse(date);
+        return;
+      }
+
       const deleteBtn = e.target.closest("button[data-delete-id]");
       const editBtn = e.target.closest("button[data-edit-id]");
 
       if (deleteBtn) {
         state.itinerary = state.itinerary.filter((x) => x.id !== deleteBtn.dataset.deleteId);
+        cleanupCollapsedDates();
         save(KEYS.itinerary, state.itinerary);
         renderItinerary();
         return;
@@ -366,12 +376,17 @@
     if (editingItineraryId) {
       const target = state.itinerary.find((x) => x.id === editingItineraryId);
       if (target) {
+        const oldDate = target.date;
         target.date = date;
         target.time = time;
         target.title = title;
         target.location = location;
         target.transport = transport;
         target.note = note;
+
+        if (oldDate !== date) {
+          cleanupCollapsedDates();
+        }
       }
       editingItineraryId = null;
       const submitBtn = $("#itineraryForm button[type='submit']");
@@ -395,12 +410,39 @@
     $("#iDate").value = todayStr();
   }
 
-  function getDateGroups(itineraryRows) {
-    const allDates = [...new Set(itineraryRows.map((x) => x.date).filter(Boolean))].sort();
-    return allDates.map((date) => ({
-      date,
-      items: itineraryRows.filter((x) => x.date === date)
-    }));
+  function getDateGroupsByCurrentOrder() {
+    const map = new Map();
+    for (const item of state.itinerary) {
+      if (!map.has(item.date)) {
+        map.set(item.date, []);
+      }
+      map.get(item.date).push(item);
+    }
+    return [...map.entries()].map(([date, items]) => ({ date, items }));
+  }
+
+  function isDayCollapsed(date) {
+    return Boolean(state.itineraryCollapsed?.[date]);
+  }
+
+  function toggleDayCollapse(date) {
+    if (!date) return;
+    const current = isDayCollapsed(date);
+    state.itineraryCollapsed[date] = !current;
+    save(KEYS.itineraryCollapsed, state.itineraryCollapsed);
+    renderItinerary();
+  }
+
+  function cleanupCollapsedDates() {
+    const aliveDates = new Set(state.itinerary.map((x) => x.date));
+    const next = {};
+    for (const date of Object.keys(state.itineraryCollapsed || {})) {
+      if (aliveDates.has(date)) {
+        next[date] = Boolean(state.itineraryCollapsed[date]);
+      }
+    }
+    state.itineraryCollapsed = next;
+    save(KEYS.itineraryCollapsed, state.itineraryCollapsed);
   }
 
   function renderItinerary() {
@@ -412,19 +454,40 @@
       return;
     }
 
-    const groups = getDateGroups(rows);
+    const groups = getDateGroupsByCurrentOrder();
     const html = [];
 
     groups.forEach((group, idx) => {
+      const collapsed = isDayCollapsed(group.date);
+      const arrow = collapsed ? "▸" : "▾";
+
       html.push(`
-        <tr class="day-group-row">
-          <td colspan="8">Day ${idx + 1}｜${escapeHTML(group.date)}</td>
+        <tr class="day-group-row" data-group-date="${group.date}">
+          <td colspan="8">
+            <div class="day-row-inner">
+              <button
+                class="day-toggle-btn ${collapsed ? "is-collapsed" : ""}"
+                data-toggle-date="${group.date}"
+                aria-expanded="${collapsed ? "false" : "true"}"
+                title="${collapsed ? "展開" : "收合"}"
+              >
+                <span class="arrow">${arrow}</span>
+              </button>
+              <span class="day-title">Day ${idx + 1}｜${escapeHTML(group.date)}</span>
+              <span class="day-count">（${group.items.length} 筆）</span>
+            </div>
+          </td>
         </tr>
       `);
 
       group.items.forEach((r) => {
         html.push(`
-          <tr data-id="${r.id}" data-date="${r.date}" draggable="true">
+          <tr
+            data-id="${r.id}"
+            data-date="${r.date}"
+            draggable="${collapsed ? "false" : "true"}"
+            class="${collapsed ? "row-hidden" : ""}"
+          >
             <td class="drag-cell" title="拖曳排序"><span class="drag-handle">☰</span></td>
             <td>${escapeHTML(r.date)}</td>
             <td>${escapeHTML(r.time)}</td>
@@ -455,6 +518,11 @@
       const row = e.target.closest("tr[data-id]");
       if (!row) return;
 
+      if (row.classList.contains("row-hidden")) {
+        e.preventDefault();
+        return;
+      }
+
       if (!e.target.closest(".drag-handle")) {
         e.preventDefault();
         return;
@@ -476,8 +544,9 @@
 
       const target = e.target.closest("tr[data-id]");
       if (!target || target === draggingRow) return;
+      if (target.classList.contains("row-hidden")) return;
 
-      // 只允許同一天內拖曳排序，避免 Day 分組被打亂
+      // 同一天內才允許拖曳
       if ((target.dataset.date || "") !== draggingDate) return;
 
       const rect = target.getBoundingClientRect();
@@ -503,6 +572,7 @@
   }
 
   function persistItineraryOrderFromDOM() {
+    // 包含隱藏列，避免收合狀態下遺失排序資料
     const rows = [...$("#itineraryTbody").querySelectorAll("tr[data-id]")];
     if (!rows.length) return;
 
@@ -652,7 +722,9 @@
         const name = zh.of(upper);
         if (name && name !== upper) return name;
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
 
     return upper;
   }
@@ -665,10 +737,8 @@
   function parseCurrencyCode(inputText) {
     const raw = String(inputText || "").trim().toUpperCase();
 
-    // 直接輸入代碼，例如 TWD
     if (/^[A-Z]{3}$/.test(raw)) return raw;
 
-    // 輸入形式 中文(CODE)
     const m = raw.match(/\(([A-Z]{3})\)/);
     if (m) return m[1];
 
@@ -739,7 +809,6 @@
       return;
     }
 
-    // 正規化顯示
     $("#fxFromInput").value = currencyLabel(from);
     $("#fxToInput").value = currencyLabel(to);
 
@@ -796,7 +865,6 @@
         labels.push(start, end);
         values.push(1, 1);
       } else {
-        // 每 2 天抓 1 筆，兼顧速度和可讀性
         const startDate = new Date(start);
         const endDate = new Date(end);
         const stepDays = 2;
@@ -885,7 +953,6 @@
 
       list.push({ id: uid("pk"), kind: "section", text: "衣物建議" });
       const outfit = Math.max(2, Math.ceil(days / 2));
-
       [
         `外出衣物 x ${outfit} 套`,
         `內衣褲 x ${days} 套`,
@@ -896,7 +963,6 @@
 
     if (type === "international") {
       list.push({ id: uid("pk"), kind: "section", text: "託運行李" });
-
       [
         "外出衣物", "內衣褲", "襪子", "薄外套", "鞋子", "拖鞋",
         "帽子", "墨鏡", "雨傘", "衛生紙", "濕紙巾", "衛生棉",
@@ -905,7 +971,6 @@
       ].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
 
       list.push({ id: uid("pk"), kind: "section", text: "手提行李" });
-
       [
         "護照正本", "護照影本", "身分證正本", "身分證影本", "簽證文件",
         "機票", "登機證", "SIM卡", "SIM卡針", "信用卡", "當地貨幣",
@@ -914,7 +979,6 @@
       ].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
 
       list.push({ id: uid("pk"), kind: "section", text: "出發前提醒" });
-
       [
         "行動電源與備用鋰電池不可拖運，必須放手提或隨身行李。",
         "手提液體每瓶需 ≤ 100ml，且須放入 1 公升可重複密封透明袋。",
@@ -925,7 +989,6 @@
 
     if (type === "business") {
       list.push({ id: uid("pk"), kind: "section", text: "商務出差行李清單" });
-
       [
         "筆電", "筆電充電器", "手機", "行動電源", "轉接頭",
         "耳機", "名片", "文件資料", "正式服裝", "皮鞋", "盥洗用品", "藥品"
@@ -933,12 +996,7 @@
     }
 
     if (type === "other") {
-      list.push({
-        id: uid("pk"),
-        kind: "section",
-        text: `其他旅遊清單${otherText ? "：" + otherText : ""}`
-      });
-
+      list.push({ id: uid("pk"), kind: "section", text: `其他旅遊清單${otherText ? "：" + otherText : ""}` });
       [
         "手機", "錢包", "充電器", "行動電源",
         "牙刷牙膏", "毛巾", "衛生紙", "雨傘"
@@ -947,23 +1005,17 @@
 
     if (climate === "cold") {
       list.push({ id: uid("pk"), kind: "section", text: "寒冷氣候補充" });
-      ["羽絨外套", "手套", "毛帽", "發熱衣"].forEach((x) =>
-        list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 })
-      );
+      ["羽絨外套", "手套", "毛帽", "發熱衣"].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
     }
 
     if (climate === "hot") {
       list.push({ id: uid("pk"), kind: "section", text: "炎熱氣候補充" });
-      ["防曬乳", "透氣衣物", "太陽眼鏡"].forEach((x) =>
-        list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 })
-      );
+      ["防曬乳", "透氣衣物", "太陽眼鏡"].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
     }
 
     if (climate === "rainy") {
       list.push({ id: uid("pk"), kind: "section", text: "多雨氣候補充" });
-      ["雨傘", "防水外套", "防水鞋套"].forEach((x) =>
-        list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 })
-      );
+      ["雨傘", "防水外套", "防水鞋套"].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
     }
 
     state.packing = list;
