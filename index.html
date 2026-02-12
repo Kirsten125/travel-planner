@@ -52,7 +52,7 @@
 
           <div class="field">
             <label>交通方式</label>
-            <input type="text" id="iTransport" placeholder="例如：火車 / 自駕" />
+            <input type="text" id="iTransport" placeholder="例如：巴士 / 自駕" />
           </div>
 
           <div class="field">
@@ -213,11 +213,11 @@
           <button class="primary-btn full" type="submit">更新趨勢圖</button>
         </form>
 
-        <div class="chart-card">
+        <div class="chart-card fx-chart">
           <canvas id="fxChart"></canvas>
         </div>
 
-        <p class="muted">備註：此匯率 API 為工作日匯率資料。</p>
+        <p class="muted">提醒：趨勢圖範圍請不要超過 90 天，避免 API 請求過多。</p>
       </div>
     </section>
 
