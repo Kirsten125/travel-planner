@@ -1,16 +1,17 @@
 (() => {
-
   // ========= 匯率 API =========
-  // 這個 API 支援 TWD 且有歷史資料
+  // 支援 TWD 且可取歷史資料
   const FX_API = {
     latest: "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies",
     date: (yyyy_mm_dd) =>
       `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${yyyy_mm_dd}/v1/currencies`
   };
 
+  const FX_AUTO_REFRESH_MS = 60 * 1000; // 60 秒
+  const FX_TREND_AUTO_EVERY = 5; // 每 5 次自動更新重抓一次趨勢
+
   const PRIORITY_CURRENCIES = ["TWD", "USD", "EUR", "JPY", "CNY", "KRW", "GBP", "HKD"];
 
-  // 保底常用幣別中文
   const CURRENCY_ZH_MAP = {
     TWD: "新臺幣",
     USD: "美元",
@@ -42,13 +43,15 @@
     ILS: "以色列謝克爾",
     ISK: "冰島克朗",
     MXN: "墨西哥披索",
-    BRL: "巴西里拉"
+    BRL: "巴西里拉",
+    AED: "阿聯酋迪拉姆",
+    SAR: "沙烏地里亞爾"
   };
 
   const KEYS = {
-    itinerary: "travel_itinerary_v3",
-    expenses: "travel_expenses_v3",
-    packing: "travel_packing_v3"
+    itinerary: "travel_itinerary_v4",
+    expenses: "travel_expenses_v4",
+    packing: "travel_packing_v4"
   };
 
   const state = {
@@ -65,10 +68,12 @@
   };
 
   let editingItineraryId = null;
+  let fxAutoTimer = null;
+  let fxAutoTickCount = 0;
 
   document.addEventListener("DOMContentLoaded", init);
 
-  function init() {
+  async function init() {
     initTabs();
     initDefaultDates();
     bindForms();
@@ -83,9 +88,18 @@
     renderExpenses();
     renderPacking();
 
-    initCurrencies().then(async () => {
-      await convertCurrency();
-      await loadFxTrend();
+    await initCurrencies();
+    bindFxLiveEvents();
+
+    await convertCurrency();
+    await loadFxTrend();
+
+    startFxAutoRefresh();
+
+    document.addEventListener("visibilitychange", async () => {
+      if (!document.hidden) {
+        await convertCurrency({ silent: true, auto: true });
+      }
     });
   }
 
@@ -132,6 +146,15 @@
     return `${y}-${m}-${day}`;
   }
 
+  function nowTimeStr() {
+    return new Intl.DateTimeFormat("zh-TW", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    }).format(new Date());
+  }
+
   function formatTWD(value) {
     return new Intl.NumberFormat("zh-TW", {
       style: "currency",
@@ -146,6 +169,14 @@
       currency,
       maximumFractionDigits: 2
     }).format(Number(value || 0));
+  }
+
+  function debounce(fn, delay = 300) {
+    let timer = null;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
   }
 
   function initDefaultDates() {
@@ -192,6 +223,10 @@
       const to = $("#fxToInput").value;
       $("#fxFromInput").value = to;
       $("#fxToInput").value = from;
+
+      normalizeCurrencyInput($("#fxFromInput"));
+      normalizeCurrencyInput($("#fxToInput"));
+
       await convertCurrency();
       await loadFxTrend();
     });
@@ -210,6 +245,58 @@
     $("#clearPackingBtn")?.addEventListener("click", clearPackingChecks);
 
     $("#pType")?.addEventListener("change", updateOtherTypeVisibility);
+  }
+
+  function bindFxLiveEvents() {
+    const onFxInput = debounce(async () => {
+      await convertCurrency({ silent: true });
+    }, 300);
+
+    $("#fxAmount")?.addEventListener("input", onFxInput);
+    $("#fxFromInput")?.addEventListener("input", onFxInput);
+    $("#fxToInput")?.addEventListener("input", onFxInput);
+
+    const onCurrencyChanged = debounce(async () => {
+      normalizeCurrencyInput($("#fxFromInput"));
+      normalizeCurrencyInput($("#fxToInput"));
+      await convertCurrency({ silent: true });
+      await loadFxTrend({ silent: true });
+    }, 300);
+
+    $("#fxFromInput")?.addEventListener("change", onCurrencyChanged);
+    $("#fxToInput")?.addEventListener("change", onCurrencyChanged);
+
+    $("#fxFromInput")?.addEventListener("blur", () => normalizeCurrencyInput($("#fxFromInput")));
+    $("#fxToInput")?.addEventListener("blur", () => normalizeCurrencyInput($("#fxToInput")));
+  }
+
+  function startFxAutoRefresh() {
+    stopFxAutoRefresh();
+
+    fxAutoTickCount = 0;
+
+    fxAutoTimer = setInterval(async () => {
+      if (document.hidden) return;
+
+      const from = parseCurrencyCode($("#fxFromInput")?.value);
+      const to = parseCurrencyCode($("#fxToInput")?.value);
+      if (!from || !to) return;
+
+      fxAutoTickCount += 1;
+
+      await convertCurrency({ silent: true, auto: true });
+
+      if (fxAutoTickCount % FX_TREND_AUTO_EVERY === 0) {
+        await loadFxTrend({ silent: true, auto: true });
+      }
+    }, FX_AUTO_REFRESH_MS);
+  }
+
+  function stopFxAutoRefresh() {
+    if (fxAutoTimer) {
+      clearInterval(fxAutoTimer);
+      fxAutoTimer = null;
+    }
   }
 
   function updateOtherTypeVisibility() {
@@ -287,7 +374,8 @@
         target.note = note;
       }
       editingItineraryId = null;
-      $("#itineraryForm button[type='submit']").textContent = "新增行程";
+      const submitBtn = $("#itineraryForm button[type='submit']");
+      if (submitBtn) submitBtn.textContent = "新增行程";
     } else {
       state.itinerary.push({
         id: uid("it"),
@@ -307,6 +395,14 @@
     $("#iDate").value = todayStr();
   }
 
+  function getDateGroups(itineraryRows) {
+    const allDates = [...new Set(itineraryRows.map((x) => x.date).filter(Boolean))].sort();
+    return allDates.map((date) => ({
+      date,
+      items: itineraryRows.filter((x) => x.date === date)
+    }));
+  }
+
   function renderItinerary() {
     const tbody = $("#itineraryTbody");
     const rows = [...state.itinerary];
@@ -316,26 +412,44 @@
       return;
     }
 
-    tbody.innerHTML = rows.map((r) => `
-      <tr data-id="${r.id}" draggable="true">
-        <td class="drag-cell" title="拖曳排序"><span class="drag-handle">☰</span></td>
-        <td>${escapeHTML(r.date)}</td>
-        <td>${escapeHTML(r.time)}</td>
-        <td>${escapeHTML(r.title)}</td>
-        <td>${escapeHTML(r.location || "-")}</td>
-        <td>${escapeHTML(r.transport || "-")}</td>
-        <td>${escapeHTML(r.note || "-")}</td>
-        <td>
-          <button class="secondary-btn" data-edit-id="${r.id}">編輯</button>
-          <button class="action-btn" data-delete-id="${r.id}">刪除</button>
-        </td>
-      </tr>
-    `).join("");
+    const groups = getDateGroups(rows);
+    const html = [];
+
+    groups.forEach((group, idx) => {
+      html.push(`
+        <tr class="day-group-row">
+          <td colspan="8">Day ${idx + 1}｜${escapeHTML(group.date)}</td>
+        </tr>
+      `);
+
+      group.items.forEach((r) => {
+        html.push(`
+          <tr data-id="${r.id}" data-date="${r.date}" draggable="true">
+            <td class="drag-cell" title="拖曳排序"><span class="drag-handle">☰</span></td>
+            <td>${escapeHTML(r.date)}</td>
+            <td>${escapeHTML(r.time)}</td>
+            <td>${escapeHTML(r.title)}</td>
+            <td>${escapeHTML(r.location || "-")}</td>
+            <td>${escapeHTML(r.transport || "-")}</td>
+            <td>${escapeHTML(r.note || "-")}</td>
+            <td>
+              <button class="secondary-btn" data-edit-id="${r.id}">編輯</button>
+              <button class="action-btn" data-delete-id="${r.id}">刪除</button>
+            </td>
+          </tr>
+        `);
+      });
+    });
+
+    tbody.innerHTML = html.join("");
   }
 
   function initItineraryDragSort() {
     const tbody = $("#itineraryTbody");
+    if (!tbody) return;
+
     let draggingRow = null;
+    let draggingDate = null;
 
     tbody.addEventListener("dragstart", (e) => {
       const row = e.target.closest("tr[data-id]");
@@ -347,6 +461,7 @@
       }
 
       draggingRow = row;
+      draggingDate = row.dataset.date || "";
       row.classList.add("dragging");
 
       if (e.dataTransfer) {
@@ -362,6 +477,9 @@
       const target = e.target.closest("tr[data-id]");
       if (!target || target === draggingRow) return;
 
+      // 只允許同一天內拖曳排序，避免 Day 分組被打亂
+      if ((target.dataset.date || "") !== draggingDate) return;
+
       const rect = target.getBoundingClientRect();
       const isAfter = (e.clientY - rect.top) > rect.height / 2;
 
@@ -372,6 +490,7 @@
       if (!draggingRow) return;
       draggingRow.classList.remove("dragging");
       draggingRow = null;
+      draggingDate = null;
       persistItineraryOrderFromDOM();
     };
 
@@ -512,7 +631,7 @@
     const clean = [...new Set(
       (symbols || [])
         .map((s) => String(s || "").toUpperCase().trim())
-        .filter(Boolean)
+        .filter((v) => /^[A-Z]{3}$/.test(v))
     )];
 
     if (!clean.includes("TWD")) clean.push("TWD");
@@ -525,7 +644,6 @@
 
   function getCurrencyZhName(code) {
     const upper = String(code || "").toUpperCase();
-
     if (CURRENCY_ZH_MAP[upper]) return CURRENCY_ZH_MAP[upper];
 
     try {
@@ -540,20 +658,30 @@
   }
 
   function currencyLabel(code) {
-    const zh = getCurrencyZhName(code);
-    return `${zh}(${code})`;
+    const upper = String(code || "").toUpperCase();
+    return `${getCurrencyZhName(upper)}(${upper})`;
   }
 
   function parseCurrencyCode(inputText) {
     const raw = String(inputText || "").trim().toUpperCase();
 
-    // 如果直接輸入 TWD
+    // 直接輸入代碼，例如 TWD
     if (/^[A-Z]{3}$/.test(raw)) return raw;
 
-    // 如果輸入 新臺幣(TWD)
-    const match = raw.match(/\(([A-Z]{3})\)/);
-    if (match) return match[1];
+    // 輸入形式 中文(CODE)
+    const m = raw.match(/\(([A-Z]{3})\)/);
+    if (m) return m[1];
 
+    return "";
+  }
+
+  function normalizeCurrencyInput(inputEl) {
+    if (!inputEl) return "";
+    const code = parseCurrencyCode(inputEl.value);
+    if (code && state.currencies.includes(code)) {
+      inputEl.value = currencyLabel(code);
+      return code;
+    }
     return "";
   }
 
@@ -566,53 +694,59 @@
       const symbols = Object.keys(data).map((x) => x.toUpperCase());
 
       state.currencies = orderCurrenciesWithPriority(symbols);
-
-      const list = $("#currencyList");
-      list.innerHTML = state.currencies.map((code) => {
-        return `<option value="${escapeHTML(currencyLabel(code))}"></option>`;
-      }).join("");
-
-      // 預設值
-      $("#fxFromInput").value = currencyLabel("TWD");
-      $("#fxToInput").value = currencyLabel("EUR");
-
     } catch {
-      // fallback
       state.currencies = orderCurrenciesWithPriority([
         "TWD", "USD", "EUR", "JPY", "GBP", "CNY", "KRW",
-        "AUD", "CAD", "CHF", "HKD", "SGD", "NZD", "THB"
+        "AUD", "CAD", "CHF", "HKD", "SGD", "NZD", "THB",
+        "MYR", "PHP", "IDR", "INR", "SEK", "NOK", "DKK"
       ]);
+    }
 
-      const list = $("#currencyList");
+    const list = $("#currencyList");
+    if (list) {
       list.innerHTML = state.currencies.map((code) => {
         return `<option value="${escapeHTML(currencyLabel(code))}"></option>`;
       }).join("");
-
-      $("#fxFromInput").value = currencyLabel("TWD");
-      $("#fxToInput").value = currencyLabel("EUR");
     }
+
+    const fromInput = $("#fxFromInput");
+    const toInput = $("#fxToInput");
+
+    if (fromInput && !parseCurrencyCode(fromInput.value)) fromInput.value = currencyLabel("TWD");
+    if (toInput && !parseCurrencyCode(toInput.value)) toInput.value = currencyLabel("EUR");
   }
 
-  async function convertCurrency() {
-    const amount = Number($("#fxAmount").value);
-    const from = parseCurrencyCode($("#fxFromInput").value);
-    const to = parseCurrencyCode($("#fxToInput").value);
+  async function convertCurrency(opts = {}) {
+    const { silent = false, auto = false } = opts;
+
+    const amount = Number($("#fxAmount")?.value);
+    const from = parseCurrencyCode($("#fxFromInput")?.value);
+    const to = parseCurrencyCode($("#fxToInput")?.value);
 
     if (!Number.isFinite(amount) || amount < 0) {
-      $("#fxResult").textContent = "請輸入正確金額";
-      $("#fxMeta").textContent = "";
+      if (!silent) {
+        $("#fxResult").textContent = "請輸入正確金額";
+        $("#fxMeta").textContent = "";
+      }
       return;
     }
 
     if (!from || !to) {
-      $("#fxResult").textContent = "請選擇正確幣別";
-      $("#fxMeta").textContent = "";
+      if (!silent) {
+        $("#fxResult").textContent = "請選擇正確幣別";
+        $("#fxMeta").textContent = "";
+      }
       return;
     }
 
+    // 正規化顯示
+    $("#fxFromInput").value = currencyLabel(from);
+    $("#fxToInput").value = currencyLabel(to);
+
     if (from === to) {
       $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(amount, to)}`;
-      $("#fxMeta").textContent = `1 ${from} = 1 ${to}`;
+      $("#fxMeta").textContent =
+        `1 ${from} = 1 ${to}｜自動更新：每 60 秒｜上次同步：${nowTimeStr()}`;
       return;
     }
 
@@ -622,26 +756,34 @@
       if (!res.ok) throw new Error("fx fetch failed");
 
       const data = await res.json();
-      const rate = data[from.toLowerCase()][to.toLowerCase()];
-
+      const rate = data?.[from.toLowerCase()]?.[to.toLowerCase()];
       if (!rate) throw new Error("rate missing");
 
-      const converted = amount * rate;
+      const converted = amount * Number(rate);
 
-      $("#fxResult").textContent = `${formatCurrency(amount, from)} = ${formatCurrency(converted, to)}`;
-      $("#fxMeta").textContent = `更新日期：${data.date}｜1 ${from} = ${Number(rate).toFixed(6)} ${to}`;
+      $("#fxResult").textContent =
+        `${formatCurrency(amount, from)} = ${formatCurrency(converted, to)}`;
 
+      const dateText = data.date || todayStr();
+      const autoText = auto ? "（自動更新）" : "（手動更新）";
+
+      $("#fxMeta").textContent =
+        `更新日期：${dateText}｜1 ${from} = ${Number(rate).toFixed(6)} ${to}｜自動更新：每 60 秒｜上次同步：${nowTimeStr()} ${autoText}`;
     } catch {
-      $("#fxResult").textContent = "匯率取得失敗，請稍後再試";
-      $("#fxMeta").textContent = "";
+      if (!silent) {
+        $("#fxResult").textContent = "匯率取得失敗，請稍後再試";
+        $("#fxMeta").textContent = "";
+      }
     }
   }
 
-  async function loadFxTrend() {
-    const from = parseCurrencyCode($("#fxFromInput").value);
-    const to = parseCurrencyCode($("#fxToInput").value);
-    const start = $("#fxStart").value;
-    const end = $("#fxEnd").value;
+  async function loadFxTrend(opts = {}) {
+    const { silent = false } = opts;
+
+    const from = parseCurrencyCode($("#fxFromInput")?.value);
+    const to = parseCurrencyCode($("#fxToInput")?.value);
+    const start = $("#fxStart")?.value;
+    const end = $("#fxEnd")?.value;
 
     if (!from || !to || !start || !end) return;
     if (start > end) return;
@@ -650,34 +792,37 @@
     const values = [];
 
     try {
-      // 每 2 天抓一次，避免太多 request
-      const startDate = new Date(start);
-      const endDate = new Date(end);
+      if (from === to) {
+        labels.push(start, end);
+        values.push(1, 1);
+      } else {
+        // 每 2 天抓 1 筆，兼顧速度和可讀性
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const stepDays = 2;
 
-      const stepDays = 2;
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + stepDays)) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const dateStr = `${yyyy}-${mm}-${dd}`;
 
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + stepDays)) {
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        const dateStr = `${yyyy}-${mm}-${dd}`;
+          const url = `${FX_API.date(dateStr)}/${from.toLowerCase()}.json`;
+          const res = await fetch(url);
+          if (!res.ok) continue;
 
-        const url = `${FX_API.date(dateStr)}/${from.toLowerCase()}.json`;
-        const res = await fetch(url);
-        if (!res.ok) continue;
+          const data = await res.json();
+          const rate = data?.[from.toLowerCase()]?.[to.toLowerCase()];
+          if (!rate) continue;
 
-        const data = await res.json();
-        const rate = data[from.toLowerCase()][to.toLowerCase()];
-        if (!rate) continue;
-
-        labels.push(dateStr);
-        values.push(rate);
+          labels.push(dateStr);
+          values.push(Number(rate));
+        }
       }
 
       if (!labels.length) throw new Error("no trend data");
 
       if (charts.fx) charts.fx.destroy();
-
       charts.fx = new Chart($("#fxChart"), {
         type: "line",
         data: {
@@ -694,8 +839,9 @@
           plugins: { legend: { position: "bottom" } }
         }
       });
-
     } catch {
+      if (silent) return;
+
       if (charts.fx) charts.fx.destroy();
       charts.fx = new Chart($("#fxChart"), {
         type: "line",
@@ -708,7 +854,7 @@
     }
   }
 
-  // ========= 行李清單 =========
+  // ========= 行李 =========
   function normalizePackingState() {
     state.packing = (state.packing || []).map((x) => ({
       id: x.id || uid("pk"),
@@ -724,44 +870,20 @@
     const type = $("#pType").value;
     const climate = $("#pClimate").value;
     const days = Math.max(1, Number($("#pDays").value || 1));
-
     const otherText = ($("#pOtherType")?.value || "").trim();
 
     const list = [];
 
-    // 國內旅遊
     if (type === "domestic") {
       list.push({ id: uid("pk"), kind: "section", text: "國內旅遊行李清單" });
 
-      const base = [
-        "錢包",
-        "手機",
-        "充電器",
-        "行動電源",
-        "耳機",
-        "牙刷牙膏",
-        "洗髮精",
-        "沐浴乳",
-        "毛巾",
-        "衛生紙",
-        "濕紙巾",
-        "雨傘",
-        "防曬乳",
-        "防蚊液",
-        "拖鞋",
-        "睡衣"
-      ];
-
-      base.forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      [
+        "錢包", "手機", "充電器", "行動電源", "耳機",
+        "牙刷牙膏", "洗髮精", "沐浴乳", "毛巾", "衛生紙",
+        "濕紙巾", "雨傘", "防曬乳", "防蚊液", "拖鞋", "睡衣"
+      ].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
 
       list.push({ id: uid("pk"), kind: "section", text: "衣物建議" });
-
       const outfit = Math.max(2, Math.ceil(days / 2));
 
       [
@@ -769,191 +891,79 @@
         `內衣褲 x ${days} 套`,
         `襪子 x ${days} 雙`,
         "薄外套"
-      ].forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      ].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
     }
 
-    // 國外旅遊
     if (type === "international") {
       list.push({ id: uid("pk"), kind: "section", text: "託運行李" });
 
-      const checked = [
-        "外出衣物",
-        "內衣褲",
-        "襪子",
-        "薄外套",
-        "鞋子",
-        "拖鞋",
-        "帽子",
-        "墨鏡",
-        "雨傘",
-        "衛生紙",
-        "濕紙巾",
-        "衛生棉",
-        "化妝品",
-        "防曬乳",
-        "防蚊液",
-        "牙膏",
-        "牙刷",
-        "沐浴乳",
-        "洗髮精",
-        "卸妝用品",
-        "梳子",
-        "乳液",
-        "毛巾",
-        "浴巾"
-      ];
-
-      checked.forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      [
+        "外出衣物", "內衣褲", "襪子", "薄外套", "鞋子", "拖鞋",
+        "帽子", "墨鏡", "雨傘", "衛生紙", "濕紙巾", "衛生棉",
+        "化妝品", "防曬乳", "防蚊液", "牙膏", "牙刷", "沐浴乳",
+        "洗髮精", "卸妝用品", "梳子", "乳液", "毛巾", "浴巾"
+      ].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
 
       list.push({ id: uid("pk"), kind: "section", text: "手提行李" });
 
-      const carry = [
-        "護照正本",
-        "護照影本",
-        "身分證正本",
-        "身分證影本",
-        "簽證文件",
-        "機票",
-        "登機證",
-        "SIM卡",
-        "SIM卡針",
-        "信用卡",
-        "當地貨幣",
-        "原子筆",
-        "手機",
-        "充電線",
-        "行動電源",
-        "耳機",
-        "平板",
-        "相機",
-        "隨身藥品",
-        "眼罩",
-        "頸枕",
-        "耳塞"
-      ];
-
-      carry.forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      [
+        "護照正本", "護照影本", "身分證正本", "身分證影本", "簽證文件",
+        "機票", "登機證", "SIM卡", "SIM卡針", "信用卡", "當地貨幣",
+        "原子筆", "手機", "充電線", "行動電源", "耳機", "平板", "相機",
+        "隨身藥品", "眼罩", "頸枕", "耳塞"
+      ].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
 
       list.push({ id: uid("pk"), kind: "section", text: "出發前提醒" });
 
-      const notices = [
+      [
         "行動電源與備用鋰電池不可拖運，必須放手提或隨身行李。",
         "手提液體每瓶需 ≤ 100ml，且須放入 1 公升可重複密封透明袋。",
         "刀具與帶刃物品需托運。",
         "打火機通常以一支為限，仍請以航空公司與目的地規定為準。"
-      ];
-
-      notices.forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "note",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      ].forEach((x) => list.push({ id: uid("pk"), kind: "note", text: x, checked: false, qty: 1 }));
     }
 
-    // 商務出差
     if (type === "business") {
       list.push({ id: uid("pk"), kind: "section", text: "商務出差行李清單" });
 
-      const base = [
-        "筆電",
-        "筆電充電器",
-        "手機",
-        "行動電源",
-        "轉接頭",
-        "耳機",
-        "名片",
-        "文件資料",
-        "正式服裝",
-        "皮鞋",
-        "盥洗用品",
-        "藥品"
-      ];
-
-      base.forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      [
+        "筆電", "筆電充電器", "手機", "行動電源", "轉接頭",
+        "耳機", "名片", "文件資料", "正式服裝", "皮鞋", "盥洗用品", "藥品"
+      ].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
     }
 
-    // 其他
     if (type === "other") {
-      list.push({ id: uid("pk"), kind: "section", text: `其他旅遊清單${otherText ? "：" + otherText : ""}` });
-
-      const base = [
-        "手機",
-        "錢包",
-        "充電器",
-        "行動電源",
-        "牙刷牙膏",
-        "毛巾",
-        "衛生紙",
-        "雨傘"
-      ];
-
-      base.forEach((x) => list.push({
+      list.push({
         id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+        kind: "section",
+        text: `其他旅遊清單${otherText ? "：" + otherText : ""}`
+      });
+
+      [
+        "手機", "錢包", "充電器", "行動電源",
+        "牙刷牙膏", "毛巾", "衛生紙", "雨傘"
+      ].forEach((x) => list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 }));
     }
 
-    // 氣候補充
     if (climate === "cold") {
       list.push({ id: uid("pk"), kind: "section", text: "寒冷氣候補充" });
-      ["羽絨外套", "手套", "毛帽", "發熱衣"].forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      ["羽絨外套", "手套", "毛帽", "發熱衣"].forEach((x) =>
+        list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 })
+      );
     }
 
     if (climate === "hot") {
       list.push({ id: uid("pk"), kind: "section", text: "炎熱氣候補充" });
-      ["防曬乳", "透氣衣物", "太陽眼鏡"].forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      ["防曬乳", "透氣衣物", "太陽眼鏡"].forEach((x) =>
+        list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 })
+      );
     }
 
     if (climate === "rainy") {
       list.push({ id: uid("pk"), kind: "section", text: "多雨氣候補充" });
-      ["雨傘", "防水外套", "防水鞋套"].forEach((x) => list.push({
-        id: uid("pk"),
-        kind: "item",
-        text: x,
-        checked: false,
-        qty: 1
-      }));
+      ["雨傘", "防水外套", "防水鞋套"].forEach((x) =>
+        list.push({ id: uid("pk"), kind: "item", text: x, checked: false, qty: 1 })
+      );
     }
 
     state.packing = list;
@@ -986,42 +996,6 @@
     }));
     save(KEYS.packing, state.packing);
     renderPacking();
-  }
-
-  function renderPacking() {
-    const ul = $("#packingList");
-
-    if (!state.packing.length) {
-      ul.innerHTML = `<li><span class="muted">尚未生成清單，先選條件後按「生成清單」。</span></li>`;
-      return;
-    }
-
-    ul.innerHTML = state.packing.map((item) => {
-      if (item.kind === "section") {
-        return `<li><strong>${escapeHTML(item.text)}</strong></li>`;
-      }
-
-      if (item.kind === "note") {
-        return `<li><span class="muted">⚠ ${escapeHTML(item.text)}</span></li>`;
-      }
-
-      const qty = Math.max(1, Number(item.qty || 1));
-
-      return `
-        <li>
-          <input type="checkbox" data-check-id="${item.id}" ${item.checked ? "checked" : ""} />
-          <span class="${item.checked ? "done" : ""}">${escapeHTML(item.text)}</span>
-
-          <div class="qty-box">
-            <button class="qty-btn" data-qty-minus="${item.id}">-</button>
-            <span class="qty-num">${qty}</span>
-            <button class="qty-btn" data-qty-plus="${item.id}">+</button>
-          </div>
-
-          <button class="action-btn" data-remove-id="${item.id}">刪除</button>
-        </li>
-      `;
-    }).join("");
   }
 
   function bindPackingActions() {
@@ -1072,7 +1046,42 @@
     });
   }
 
-  // ========= HTML escape =========
+  function renderPacking() {
+    const ul = $("#packingList");
+
+    if (!state.packing.length) {
+      ul.innerHTML = `<li><span class="muted">尚未生成清單，先選條件後按「生成清單」。</span></li>`;
+      return;
+    }
+
+    ul.innerHTML = state.packing.map((item) => {
+      if (item.kind === "section") {
+        return `<li><strong>${escapeHTML(item.text)}</strong></li>`;
+      }
+
+      if (item.kind === "note") {
+        return `<li><span class="muted">⚠ ${escapeHTML(item.text)}</span></li>`;
+      }
+
+      const qty = Math.max(1, Number(item.qty || 1));
+
+      return `
+        <li>
+          <input type="checkbox" data-check-id="${item.id}" ${item.checked ? "checked" : ""} />
+          <span class="${item.checked ? "done" : ""}">${escapeHTML(item.text)}</span>
+
+          <div class="qty-box">
+            <button class="qty-btn" data-qty-minus="${item.id}">-</button>
+            <span class="qty-num">${qty}</span>
+            <button class="qty-btn" data-qty-plus="${item.id}">+</button>
+          </div>
+
+          <button class="action-btn" data-remove-id="${item.id}">刪除</button>
+        </li>
+      `;
+    }).join("");
+  }
+
   function escapeHTML(str) {
     return String(str)
       .replaceAll("&", "&amp;")
@@ -1081,5 +1090,4 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
-
 })();
