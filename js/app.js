@@ -1,6 +1,31 @@
 (() => {
   const FX_API = "https://api.frankfurter.dev/v1";
 
+  const CURRENCY_ZH = {
+    USD: "美金",
+    EUR: "歐元",
+    TWD: "台幣",
+    JPY: "日圓",
+    GBP: "英鎊",
+    KRW: "韓元",
+    CNY: "人民幣",
+    HKD: "港幣",
+    SGD: "新加坡幣",
+    AUD: "澳幣",
+    CAD: "加幣",
+    CHF: "瑞士法郎",
+    SEK: "瑞典克朗",
+    NOK: "挪威克朗",
+    DKK: "丹麥克朗",
+    NZD: "紐幣",
+    THB: "泰銖",
+    MYR: "馬來西亞幣",
+    PHP: "菲律賓披索",
+    IDR: "印尼盾",
+    INR: "印度盧比",
+    VND: "越南盾"
+  };
+
   const KEYS = {
     itinerary: "travel_itinerary_v2",
     expenses: "travel_expenses_v2",
@@ -385,7 +410,6 @@
     `).join("");
   }
 
-  // ============ 行程拖曳排序 ============
   function initItineraryDragSort() {
     const tbody = $("#itineraryTbody");
     let draggingRow = null;
@@ -565,10 +589,17 @@
     try {
       const res = await fetch(`${FX_API}/currencies`);
       if (!res.ok) throw new Error("currency fetch failed");
+
       const data = await res.json();
       state.currencies = Object.keys(data).sort();
+
+      if (!state.currencies.includes("TWD")) {
+        state.currencies.unshift("TWD");
+      }
     } catch {
-      // fallback
+      if (!state.currencies.includes("TWD")) {
+        state.currencies.unshift("TWD");
+      }
     }
 
     fillCurrencySelect($("#fxFrom"), state.currencies);
@@ -579,7 +610,10 @@
   }
 
   function fillCurrencySelect(selectEl, symbols) {
-    selectEl.innerHTML = symbols.map((s) => `<option value="${s}">${s}</option>`).join("");
+    selectEl.innerHTML = symbols.map((code) => {
+      const zh = CURRENCY_ZH[code] || "未知幣別";
+      return `<option value="${code}">${zh} ${code}</option>`;
+    }).join("");
   }
 
   async function convertCurrency() {
@@ -602,8 +636,8 @@
       const url = `${FX_API}/latest?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("fx latest failed");
-      const data = await res.json();
 
+      const data = await res.json();
       const rate = data?.rates?.[to];
       if (!rate) throw new Error("rate missing");
 
@@ -636,9 +670,10 @@
         const url = `${FX_API}/${start}..${end}?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error("fx trend failed");
-        const data = await res.json();
 
+        const data = await res.json();
         const rates = data?.rates || {};
+
         labels = Object.keys(rates).sort();
         values = labels.map((d) => rates[d][to]).filter((v) => Number.isFinite(v));
       }
@@ -680,7 +715,7 @@
     }
   }
 
-  // ============ 行李（Excel 版清單） ============
+  // ============ 行李 ============
   function normalizePackingState() {
     state.packing = (state.packing || []).map((x) => ({
       id: x.id || uid("pk"),
@@ -740,17 +775,7 @@
       ...PACKING_TEMPLATE.carry.electronics
     ]);
 
-    const typeExtras = [];
-    if (type === "city") typeExtras.push("輕便側背包", "行程票券截圖");
-    if (type === "nature") typeExtras.push("防滑鞋", "保溫水壺", "輕量雨衣", "行動電源");
-    if (type === "business") typeExtras.push("正式服裝", "筆電", "履歷/文件", "名片");
-
-    const climateExtras = [];
-    if (climate === "cold") climateExtras.push("羽絨外套", "毛帽", "手套", "發熱衣");
-    if (climate === "hot") climateExtras.push("太陽眼鏡", "透氣衣物", "防曬乳");
-    if (climate === "rainy") climateExtras.push("雨傘", "防水外套", "防水鞋套");
-
-    const checkedItems = dedupeList([...checkedBase, ...typeExtras, ...climateExtras]);
+    const checkedItems = dedupeList(checkedBase);
     const carryItems = dedupeList(carryBase);
 
     const list = [];
