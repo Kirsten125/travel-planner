@@ -774,9 +774,10 @@
 
     const list = $("#currencyList");
     if (list) {
-      list.innerHTML = state.currencies.map((code) => {
-        return `<option value="${escapeHTML(currencyLabel(code))}"></option>`;
-      }).join("");
+     list.innerHTML = state.currencies.map((code) => {
+  const label = currencyLabel(code);
+  return `<option value="${escapeHTML(label)}">${escapeHTML(label)}</option>`;
+}).join("");
     }
 
     const fromInput = $("#fxFromInput");
