@@ -422,6 +422,14 @@ tbody tr:hover {
   background: white;
 }
 
+.check-list {
+  text-align: left;
+}
+
+.check-list {
+  text-align: left;
+}
+
 .check-list li {
   display: flex;
   align-items: center;
