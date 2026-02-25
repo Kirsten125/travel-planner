@@ -4,12 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Travel Hub｜旅遊整合工具</title>
-
   <link rel="stylesheet" href="./css/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
   <div class="bg"></div>
 
   <header class="app-header">
@@ -29,11 +27,9 @@
     <!-- 匯率 -->
     <section id="tab-exchange" class="tab-panel hidden">
       <div class="panel">
-
         <h2>匯率換算工具</h2>
 
         <form id="fxForm" class="form-grid fx-grid">
-
           <div class="field">
             <label>金額</label>
             <input type="number" id="fxAmount" min="0" step="0.01" value="1000" required />
@@ -41,19 +37,18 @@
 
           <div class="field">
             <label>從</label>
-            <input id="fxFromInput" list="currencyList" autocomplete="off" />
+            <input id="fxFromInput" list="currencyList" placeholder="例如：新臺幣(TWD)" autocomplete="off" />
           </div>
 
           <div class="field">
             <label>換成</label>
-            <input id="fxToInput" list="currencyList" autocomplete="off" />
+            <input id="fxToInput" list="currencyList" placeholder="例如：日圓(JPY)" autocomplete="off" />
           </div>
 
           <div class="fx-actions">
             <button class="secondary-btn" type="button" id="swapBtn">交換貨幣</button>
             <button class="primary-btn" type="submit">立即換算</button>
           </div>
-
         </form>
 
         <datalist id="currencyList"></datalist>
@@ -63,6 +58,83 @@
           <div id="fxMeta" class="fx-meta"></div>
         </div>
 
+        <hr class="divider">
+
+        <h3>匯率趨勢圖</h3>
+
+        <form id="fxTrendForm" class="form-grid fx-trend-grid">
+          <div class="field">
+            <label>開始日期</label>
+            <input type="date" id="fxStart" />
+          </div>
+
+          <div class="field">
+            <label>結束日期</label>
+            <input type="date" id="fxEnd" />
+          </div>
+
+          <button class="primary-btn full" type="submit">更新趨勢圖</button>
+        </form>
+
+        <div class="chart-card fx-chart-card">
+          <canvas id="fxChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 行李 -->
+    <section id="tab-packing" class="tab-panel hidden">
+      <div class="panel">
+        <h2>旅行行李清單生成器</h2>
+
+        <form id="packingForm" class="packing-grid">
+          <div class="field">
+            <label>旅遊型態</label>
+            <select id="pType">
+              <option value="domestic">國內旅遊</option>
+              <option value="international">國外旅遊</option>
+              <option value="business">商務出差</option>
+              <option value="other">其他（可選填）</option>
+            </select>
+          </div>
+
+          <div class="field hidden" id="otherTypeField">
+            <label>其他類型（可空白）</label>
+            <input type="text" id="pOtherType" />
+          </div>
+
+          <div class="field">
+            <label>氣候</label>
+            <select id="pClimate">
+              <option value="mild">溫和</option>
+              <option value="cold">寒冷</option>
+              <option value="hot">炎熱</option>
+              <option value="rainy">多雨</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>旅遊天數</label>
+            <input type="number" id="pDays" min="1" value="3" />
+          </div>
+
+          <div class="field">
+            <label>幾天洗一次衣服</label>
+            <input type="number" id="pLaundry" min="1" value="3" />
+          </div>
+
+          <div class="field packing-btn-wrap">
+            <button class="primary-btn" type="submit">生成清單</button>
+          </div>
+        </form>
+
+        <div class="packing-actions">
+          <input type="text" id="customPackingInput" />
+          <button class="secondary-btn" type="button" id="addCustomPackingBtn">新增</button>
+          <button class="danger-btn" type="button" id="clearPackingBtn">取消全部勾選</button>
+        </div>
+
+        <ul id="packingList" class="check-list"></ul>
       </div>
     </section>
 
