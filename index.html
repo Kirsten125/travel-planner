@@ -1,98 +1,281 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Travel Hub</title>
-<link rel="stylesheet" href="./css/style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Hub｜旅遊整合工具</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <div class="bg"></div>
 
-<header class="app-header">
-  <h1>Travel Hub</h1>
-</header>
+  <header class="app-header">
+    <h1>Travel Hub 旅遊整合工具</h1>
+    <p>行程規劃｜花費記帳｜匯率換算｜行李清單</p>
+  </header>
 
-<nav class="tabs">
-  <button class="tab-btn active" data-tab-btn="itinerary">行程規劃</button>
-  <button class="tab-btn" data-tab-btn="exchange">匯率工具</button>
-  <button class="tab-btn" data-tab-btn="packing">行李清單</button>
-</nav>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab-btn="itinerary">行程規劃</button>
+    <button class="tab-btn" data-tab-btn="expense">花費記帳</button>
+    <button class="tab-btn" data-tab-btn="exchange">匯率工具</button>
+    <button class="tab-btn" data-tab-btn="packing">行李清單</button>
+  </nav>
 
-<main class="container">
+  <main class="container">
+    <!-- 行程 -->
+    <section id="tab-itinerary" class="tab-panel">
+      <div class="panel">
+        <h2>旅遊行程規劃</h2>
 
-<!-- 行程 -->
-<section id="tab-itinerary" class="tab-panel">
-<div class="panel">
-<h2>行程規劃</h2>
+        <form id="itineraryForm" class="form-grid">
+          <div class="field">
+            <label>日期</label>
+            <input type="date" id="iDate" required />
+          </div>
 
-<form id="itineraryForm" class="form-grid">
-<input type="date" id="iDate" required>
-<input type="time" id="iTime" required>
-<input type="text" id="iTitle" placeholder="活動" required>
-<input type="text" id="iLocation" placeholder="地點">
-<input type="text" id="iTransport" placeholder="交通">
-<input type="text" id="iNote" placeholder="備註">
-<button type="submit" class="primary-btn full">新增</button>
-</form>
+          <div class="field">
+            <label>時間</label>
+            <input type="time" id="iTime" required />
+          </div>
 
-<table>
-<thead>
-<tr class="thead-center">
-<th>排序</th>
-<th>日期</th>
-<th>時間</th>
-<th>活動</th>
-<th>地點</th>
-<th>交通</th>
-<th>備註</th>
-<th>操作</th>
-</tr>
-</thead>
-<tbody id="itineraryTbody"></tbody>
-</table>
+          <div class="field">
+            <label>活動/景點</label>
+            <input type="text" id="iTitle" placeholder="例如：Golden Circle" required />
+          </div>
 
-</div>
-</section>
+          <div class="field">
+            <label>地點</label>
+            <input type="text" id="iLocation" placeholder="例如：Reykjavík" />
+          </div>
 
-<!-- 匯率 -->
-<section id="tab-exchange" class="tab-panel hidden">
-<div class="panel">
-<h2>匯率工具</h2>
+          <div class="field">
+            <label>交通方式</label>
+            <input type="text" id="iTransport" placeholder="例如：巴士 / 自駕" />
+          </div>
 
-<form id="fxForm" class="form-grid">
+          <div class="field">
+            <label>備註</label>
+            <input type="text" id="iNote" placeholder="例如：先線上買票" />
+          </div>
 
-<input type="number" id="fxAmount" value="1000" required>
+          <button class="primary-btn full" type="submit">新增行程</button>
+        </form>
 
-<select id="fxFrom"></select>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr class="thead-center">
+                <th>排序</th>
+                <th>日期</th>
+                <th>時間</th>
+                <th>活動</th>
+                <th>地點</th>
+                <th>交通</th>
+                <th>備註</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="itineraryTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-<select id="fxTo"></select>
+    <!-- 記帳 -->
+    <section id="tab-expense" class="tab-panel hidden">
+      <div class="panel">
+        <h2>旅遊花費記帳（TWD）</h2>
 
-<button type="button" id="swapBtn" class="secondary-btn">交換</button>
-<button type="submit" class="primary-btn">換算</button>
+        <form id="expenseForm" class="form-grid">
+          <div class="field">
+            <label>日期</label>
+            <input type="date" id="eDate" required />
+          </div>
 
-</form>
+          <div class="field">
+            <label>項目</label>
+            <input type="text" id="eItem" placeholder="例如：午餐" required />
+          </div>
 
-<div class="fx-result" id="fxResult">請輸入金額</div>
-<div id="fxMeta" class="muted"></div>
+          <div class="field">
+            <label>分類</label>
+            <select id="eCategory" required>
+              <option value="餐飲">餐飲</option>
+              <option value="交通">交通</option>
+              <option value="住宿">住宿</option>
+              <option value="門票">門票</option>
+              <option value="購物">購物</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
 
-</div>
-</section>
+          <div class="field">
+            <label>金額（TWD）</label>
+            <input type="number" id="eAmount" min="0" step="1" placeholder="例如：350" required />
+          </div>
 
-<!-- 行李 -->
-<section id="tab-packing" class="tab-panel hidden">
-<div class="panel">
-<h2>行李清單</h2>
+          <button class="primary-btn full" type="submit">新增花費</button>
+        </form>
 
-<button id="generatePacking" class="primary-btn">生成清單</button>
+        <div class="metrics">
+          <div class="metric-card">
+            <h3>總花費</h3>
+            <p id="mTotal">NT$0</p>
+          </div>
+          <div class="metric-card">
+            <h3>今日花費</h3>
+            <p id="mToday">NT$0</p>
+          </div>
+          <div class="metric-card">
+            <h3>平均每日</h3>
+            <p id="mAvg">NT$0</p>
+          </div>
+        </div>
 
-<ul id="packingList" class="check-list"></ul>
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3>分類占比</h3>
+            <canvas id="categoryChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>每日花費</h3>
+            <canvas id="dailyChart"></canvas>
+          </div>
+        </div>
 
-</div>
-</section>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr class="thead-center">
+                <th>日期</th>
+                <th>項目</th>
+                <th>分類</th>
+                <th>金額</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="expenseTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-</main>
+    <!-- 匯率 -->
+    <section id="tab-exchange" class="tab-panel hidden">
+      <div class="panel">
+        <h2>匯率換算工具</h2>
 
-<script src="./js/app.js"></script>
+        <form id="fxForm" class="form-grid fx-grid">
+          <div class="field">
+            <label>金額</label>
+            <input type="number" id="fxAmount" min="0" step="0.01" value="1000" required />
+          </div>
+
+          <div class="field">
+            <label>從（可打字搜尋）</label>
+            <input id="fxFromInput" list="currencyList" placeholder="例如：新臺幣(TWD)" />
+          </div>
+
+          <div class="field">
+            <label>換成（可打字搜尋）</label>
+            <input id="fxToInput" list="currencyList" placeholder="例如：日圓(JPY)" />
+          </div>
+
+          <div class="fx-actions">
+            <button class="secondary-btn" type="button" id="swapBtn">交換貨幣</button>
+            <button class="primary-btn" type="submit">立即換算</button>
+          </div>
+        </form>
+
+        <datalist id="currencyList"></datalist>
+
+        <div class="fx-result-box">
+          <div id="fxResult" class="fx-result">請輸入金額並換算</div>
+          <div id="fxMeta" class="fx-meta"></div>
+        </div>
+
+        <hr class="divider">
+
+        <h3>匯率趨勢圖</h3>
+
+        <form id="fxTrendForm" class="form-grid fx-trend-grid">
+          <div class="field">
+            <label>開始日期</label>
+            <input type="date" id="fxStart" />
+          </div>
+
+          <div class="field">
+            <label>結束日期</label>
+            <input type="date" id="fxEnd" />
+          </div>
+
+          <button class="primary-btn full" type="submit">更新趨勢圖</button>
+        </form>
+
+        <div class="chart-card fx-chart-card">
+          <canvas id="fxChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 行李 -->
+    <section id="tab-packing" class="tab-panel hidden">
+      <div class="panel">
+        <h2>旅行行李清單生成器</h2>
+
+        <form id="packingForm" class="packing-grid">
+          <div class="field">
+            <label>旅遊型態</label>
+            <select id="pType">
+              <option value="domestic">國內旅遊</option>
+              <option value="international">國外旅遊</option>
+              <option value="business">商務出差</option>
+              <option value="other">其他（可選填）</option>
+            </select>
+          </div>
+
+          <div class="field hidden" id="otherTypeField">
+            <label>其他類型（可空白）</label>
+            <input type="text" id="pOtherType" placeholder="例如：環島機車旅行" />
+          </div>
+
+          <div class="field">
+            <label>氣候</label>
+            <select id="pClimate">
+              <option value="mild">溫和</option>
+              <option value="cold">寒冷</option>
+              <option value="hot">炎熱</option>
+              <option value="rainy">多雨</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>旅遊天數</label>
+            <input type="number" id="pDays" min="1" value="3" />
+          </div>
+
+          <div class="field">
+            <label>幾天洗一次衣服</label>
+            <input type="number" id="pLaundry" min="1" value="3" />
+          </div>
+
+          <div class="field packing-btn-wrap">
+            <button class="primary-btn" type="submit">生成清單</button>
+          </div>
+        </form>
+
+        <div class="packing-actions">
+          <input type="text" id="customPackingInput" placeholder="自訂新增物品，例如：相機電池" />
+          <button class="secondary-btn" type="button" id="addCustomPackingBtn">新增</button>
+          <button class="danger-btn" type="button" id="clearPackingBtn">取消全部勾選</button>
+        </div>
+
+        <ul id="packingList" class="check-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="./js/app.js"></script>
 </body>
 </html>
