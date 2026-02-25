@@ -485,7 +485,7 @@
           <tr
             data-id="${r.id}"
             data-date="${r.date}"
-            draggable="${collapsed ? "false" : "true"}"
+            draggable="true"
             class="${collapsed ? "row-hidden" : ""}"
           >
             <td class="drag-cell" title="拖曳排序"><span class="drag-handle">☰</span></td>
