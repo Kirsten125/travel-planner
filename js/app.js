@@ -523,10 +523,10 @@
         return;
       }
 
-      if (!e.target.closest(".drag-handle")) {
-        e.preventDefault();
-        return;
-      }
+      if (!e.target.closest(".drag-cell")) {
+  e.preventDefault();
+  return;
+}
 
       draggingRow = row;
       draggingDate = row.dataset.date || "";
