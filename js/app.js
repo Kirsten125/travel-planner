@@ -523,9 +523,10 @@
         return;
       }
 
-      if (!e.target.closest(".drag-cell")) {
-  e.preventDefault();
-  return;
+  const cell = e.target.closest(".drag-cell");
+  if (!cell) {
+    e.preventDefault();
+    return;
 }
 
       draggingRow = row;
