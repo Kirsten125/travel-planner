@@ -432,12 +432,15 @@ tbody tr:hover {
   gap: 10px;
   padding: 12px;
   border-bottom: 1px solid #f1f5f9;
-  justify-content: flex-start;
   text-align: left;
 }
 
-.check-list li > span,
-.check-list li > strong {
+.check-list li input[type="checkbox"] {
+  flex: 0 0 auto;
+}
+
+.check-list li span,
+.check-list li strong {
   flex: 1;
   text-align: left;
 }
