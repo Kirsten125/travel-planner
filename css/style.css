@@ -426,10 +426,6 @@ tbody tr:hover {
   text-align: left;
 }
 
-.check-list {
-  text-align: left;
-}
-
 .check-list li {
   display: flex;
   align-items: center;
@@ -437,6 +433,20 @@ tbody tr:hover {
   padding: 12px;
   border-bottom: 1px solid #f1f5f9;
   justify-content: flex-start;
+  text-align: left;
+}
+
+.check-list li > span,
+.check-list li > strong {
+  flex: 1;
+  text-align: left;
+}
+
+.qty-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .check-list li:last-child {
