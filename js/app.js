@@ -508,69 +508,66 @@
   }
 
   function initItineraryDragSort() {
-    const tbody = $("#itineraryTbody");
-    if (!tbody) return;
+  const tbody = $("#itineraryTbody");
+  if (!tbody) return;
 
-    let draggingRow = null;
-    let draggingDate = null;
+  let draggingRow = null;
+  let draggingDate = null;
 
-    tbody.addEventListener("dragstart", (e) => {
-      const row = e.target.closest("tr[data-id]");
-      if (!row) return;
+  tbody.addEventListener("dragstart", (e) => {
+    const row = e.target.closest("tr[data-id]");
+    if (!row) {
+      e.preventDefault();
+      return;
+    }
 
-      if (row.classList.contains("row-hidden")) {
-        e.preventDefault();
-        return;
-      }
+    if (row.classList.contains("row-hidden")) {
+      e.preventDefault();
+      return;
+    }
 
-  const cell = e.target.closest(".drag-cell");
-  if (!cell) {
+    draggingRow = row;
+    draggingDate = row.dataset.date || "";
+    row.classList.add("dragging");
+
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", row.dataset.id || "");
+    }
+  });
+
+  tbody.addEventListener("dragover", (e) => {
+    if (!draggingRow) return;
     e.preventDefault();
-    return;
+
+    const target = e.target.closest("tr[data-id]");
+    if (!target || target === draggingRow) return;
+    if (target.classList.contains("row-hidden")) return;
+
+    // 只允許同一天內拖曳
+    if ((target.dataset.date || "") !== draggingDate) return;
+
+    const rect = target.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+
+    tbody.insertBefore(draggingRow, isAfter ? target.nextSibling : target);
+  });
+
+  const finalize = () => {
+    if (!draggingRow) return;
+    draggingRow.classList.remove("dragging");
+    draggingRow = null;
+    draggingDate = null;
+    persistItineraryOrderFromDOM();
+  };
+
+  tbody.addEventListener("drop", (e) => {
+    e.preventDefault();
+    finalize();
+  });
+
+  tbody.addEventListener("dragend", finalize);
 }
-
-      draggingRow = row;
-      draggingDate = row.dataset.date || "";
-      row.classList.add("dragging");
-
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", row.dataset.id || "");
-      }
-    });
-
-    tbody.addEventListener("dragover", (e) => {
-      if (!draggingRow) return;
-      e.preventDefault();
-
-      const target = e.target.closest("tr[data-id]");
-      if (!target || target === draggingRow) return;
-      if (target.classList.contains("row-hidden")) return;
-
-      // 同一天內才允許拖曳
-      if ((target.dataset.date || "") !== draggingDate) return;
-
-      const rect = target.getBoundingClientRect();
-      const isAfter = (e.clientY - rect.top) > rect.height / 2;
-
-      tbody.insertBefore(draggingRow, isAfter ? target.nextSibling : target);
-    });
-
-    const finalize = () => {
-      if (!draggingRow) return;
-      draggingRow.classList.remove("dragging");
-      draggingRow = null;
-      draggingDate = null;
-      persistItineraryOrderFromDOM();
-    };
-
-    tbody.addEventListener("drop", (e) => {
-      e.preventDefault();
-      finalize();
-    });
-
-    tbody.addEventListener("dragend", finalize);
-  }
 
   function persistItineraryOrderFromDOM() {
     // 包含隱藏列，避免收合狀態下遺失排序資料
