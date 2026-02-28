@@ -17,7 +17,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   font-family: "Segoe UI", "Noto Sans TC", "PingFang TC", sans-serif;
@@ -31,9 +32,9 @@ html, body {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 10% 20%, rgba(59,130,246,0.22), transparent 30%),
-    radial-gradient(circle at 80% 10%, rgba(14,165,233,0.18), transparent 35%),
-    radial-gradient(circle at 50% 80%, rgba(168,85,247,0.18), transparent 40%);
+    radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.22), transparent 30%),
+    radial-gradient(circle at 80% 10%, rgba(14, 165, 233, 0.18), transparent 35%),
+    radial-gradient(circle at 50% 80%, rgba(168, 85, 247, 0.18), transparent 40%);
 }
 
 .app-header {
@@ -95,7 +96,7 @@ html, body {
 
 .panel {
   background: var(--card);
-  border: 1px solid rgba(255,255,255,0.65);
+  border: 1px solid rgba(255, 255, 255, 0.65);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 18px;
@@ -128,7 +129,8 @@ h3 {
   color: #334155;
 }
 
-input, select {
+input:not([type="checkbox"]):not([type="radio"]),
+select {
   width: 100%;
   border: 1px solid var(--border);
   background: #fff;
@@ -138,12 +140,15 @@ input, select {
   outline: none;
 }
 
-input:focus, select:focus {
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
 }
 
-.primary-btn, .secondary-btn, .danger-btn {
+.primary-btn,
+.secondary-btn,
+.danger-btn {
   border: none;
   border-radius: 14px;
   padding: 10px 14px;
@@ -200,10 +205,8 @@ thead th {
   padding: 12px;
   font-size: 0.95rem;
   border-bottom: 1px solid #e5e7eb;
-}
-
-.thead-center th {
   text-align: center;
+  vertical-align: middle;
 }
 
 tbody td {
@@ -211,6 +214,7 @@ tbody td {
   border-bottom: 1px solid #f1f5f9;
   font-size: 0.95rem;
   text-align: center;
+  vertical-align: middle;
 }
 
 tbody tr:hover {
@@ -407,12 +411,15 @@ tbody tr:hover {
   gap: 10px;
   margin-bottom: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .packing-actions input {
-  flex: 1;
+  flex: 1 1 260px;
+  min-width: 220px;
 }
 
+/* 行李清單 */
 .check-list {
   list-style: none;
   padding: 0;
@@ -422,42 +429,46 @@ tbody tr:hover {
   background: white;
 }
 
-.check-list {
-  text-align: left;
-}
-
 .check-list li {
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
+  column-gap: 10px;
   padding: 12px;
   border-bottom: 1px solid #f1f5f9;
   text-align: left;
-}
-
-.check-list li input[type="checkbox"] {
-  flex: 0 0 auto;
-}
-
-.check-list li span,
-.check-list li strong {
-  flex: 1;
-  text-align: left;
-}
-
-.qty-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
 }
 
 .check-list li:last-child {
   border-bottom: none;
 }
 
-.check-list li strong {
+.check-list li > input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--primary);
+  justify-self: start;
+}
+
+.check-list li > span,
+.check-list li > strong {
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+  justify-self: start;
+  word-break: break-word;
+}
+
+.check-list li > strong {
   font-size: 1.05rem;
+}
+
+/* 分類標題列與提醒列跨整列 */
+.check-list li > strong:only-child,
+.check-list li > span.muted:only-child {
+  grid-column: 1 / -1;
 }
 
 .check-list span.done {
@@ -469,6 +480,7 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   gap: 6px;
+  justify-self: end;
 }
 
 .qty-btn {
@@ -485,6 +497,10 @@ tbody tr:hover {
   min-width: 26px;
   text-align: center;
   font-weight: 900;
+}
+
+.check-list .action-btn {
+  justify-self: end;
 }
 
 .hidden {
@@ -511,5 +527,32 @@ tbody tr:hover {
   .fx-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+@media (max-width: 680px) {
+  .packing-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .packing-actions input,
+  .packing-actions button {
+    width: 100%;
+  }
+
+  .check-list li {
+    grid-template-columns: 20px minmax(0, 1fr);
+    row-gap: 10px;
+  }
+
+  .qty-box {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .check-list .action-btn {
+    grid-column: 2;
+    justify-self: start;
   }
 }
